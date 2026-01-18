@@ -24,7 +24,7 @@ import {
 } from "firebase/auth";
 
 // --- CONFIGURATION ---
-const API_URL = "https://focus-mate-backend-xlu3.onrender.com"; 
+const API_URL = "https://focus-mate-final-v3.onrender.com"; 
 const cn = (...inputs) => twMerge(clsx(inputs));
 
 const firebaseConfig = {
