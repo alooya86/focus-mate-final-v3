@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  height: 100%;
+}
+
+body {
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: #F8FAFC; /* Slate-50 background */
+  font-family: 'Inter', sans-serif;
+  overflow-y: auto; /* Force vertical scrollbar if needed */
+}
+
+#root {
+  min-height: 100vh; /* Allow root to grow */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Custom Scrollbar (Optional, makes it look cleaner) */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
