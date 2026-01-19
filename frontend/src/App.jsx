@@ -490,6 +490,7 @@ function TaskCard({ task, onDelete, onUpdate, onProjectClick }) {
        <div className="bg-white p-5 rounded-2xl border-2 border-indigo-500 shadow-md space-y-4">
          <div className="relative">
             <input className="w-full text-lg font-bold border-b border-slate-200 focus:outline-none pb-2 pr-8" value={editData.content} onChange={e => setEditData({...editData, content: e.target.value})} autoFocus />
+            <button onClick={() => setIsEditing(false)} className="absolute right-0 top-0 text-slate-300 hover:text-rose-500"><XCircle size={18} /></button>
          </div>
          <div className="flex gap-4">
            <div className="flex-1 relative">
@@ -506,6 +507,7 @@ function TaskCard({ task, onDelete, onUpdate, onProjectClick }) {
              <button key={lvl} onClick={() => setEditData({...editData, energy: lvl})} className={cn("px-3 py-1 rounded-full text-xs font-bold uppercase border", editData.energy === lvl ? getPillStyle(lvl) + " border-transparent" : "bg-white border-slate-200 text-slate-400")}>{lvl}</button>
            ))}
            <button onClick={() => setEditData({...editData, isUrgent: !editData.isUrgent})} className={cn("px-3 py-1 rounded-full text-xs font-bold border", editData.isUrgent ? "bg-rose-500 text-white border-rose-500" : "bg-white text-slate-400")}>Urgent</button>
+           <button onClick={() => setEditData({...editData, isSomeday: !editData.isSomeday})} className={cn("px-3 py-1 rounded-full text-xs font-bold border", editData.isSomeday ? "bg-indigo-500 text-white border-indigo-500" : "bg-white text-slate-400")}>Someday</button>
          </div>
          <div className="flex justify-end gap-2">
            <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-slate-400 font-bold hover:bg-slate-50 rounded-lg">Cancel</button>
@@ -521,7 +523,7 @@ function TaskCard({ task, onDelete, onUpdate, onProjectClick }) {
   const completedSub = subtasks.filter(s => s.isCompleted).length;
 
   return (
-    <motion.div layout initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0}} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:border-indigo-200 transition-all">
+    <motion.div layout initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0}} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:border-indigo-200 transition-all group">
       <div className="flex items-start gap-4">
         {/* Main Checkbox */}
         <button 
@@ -596,6 +598,7 @@ function TaskCard({ task, onDelete, onUpdate, onProjectClick }) {
             </form>
         </div>
 
+        {/* --- EDIT BUTTONS VISIBLE ON HOVER --- */}
         <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button onClick={() => setIsEditing(true)} className="p-2 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"><Pencil size={18} /></button>
             <button onClick={onDelete} className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg"><Trash2 size={18} /></button>
