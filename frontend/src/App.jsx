@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Battery, BatteryCharging, BatteryFull, BatteryMedium, 
   Inbox, Zap, Plus, X, CheckCircle2, Flame, Loader2, Trash2, Pencil, Save, Calendar, Archive,
-  Clock, LogOut, LayoutGrid, Mail, ArrowLeft, XCircle
+  Clock, LogOut, LayoutGrid, Mail, ArrowLeft, XCircle, ListTodo
 } from "lucide-react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -33,8 +33,7 @@ const firebaseConfig = {
   storageBucket: "focus-mate-cb99f.firebasestorage.app",
   messagingSenderId: "174603807809",
   appId: "1:174603807809:web:52b7ba205b56e277b5eac0"
-};
-// ------------------------------------------------------------------
+};// ------------------------------------------------------------------
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
@@ -118,7 +117,7 @@ function Dashboard({ user, onLogout }) {
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [focusMode, setFocusMode] = useState({ isOpen: false, mode: "ready" });
-  const [filterProject, setFilterProject] = useState(null); // New: Filter by project
+  const [filterProject, setFilterProject] = useState(null); 
   
   const [formData, setFormData] = useState({
     content: "", project: "", energy: "medium", isUrgent: false, 
@@ -137,8 +136,12 @@ function Dashboard({ user, onLogout }) {
     if (e) e.preventDefault();
     if (!formData.content.trim()) return;
 
+    // If we are in "Project View", automatically add to that project
+    const finalProject = filterProject || formData.project;
+
     const payload = { 
       ...formData, 
+      project: finalProject,
       isSomeday: asSomeday,
       step: formData.step ? parseInt(formData.step) : null
     };
@@ -146,7 +149,15 @@ function Dashboard({ user, onLogout }) {
     axios.post(`${API_URL}/tasks`, payload, { headers: { "x-user-id": user.uid } })
       .then(() => {
         refreshTasks();
-        setFormData({ ...formData, content: "", isUrgent: false, dueDate: "", step: "" });
+        // Clear form but keep project if in project view
+        setFormData({ 
+          ...formData, 
+          content: "", 
+          isUrgent: false, 
+          dueDate: "", 
+          step: "",
+          project: filterProject ? "" : formData.project // Clear input visual only
+        });
       });
   };
 
@@ -167,40 +178,57 @@ function Dashboard({ user, onLogout }) {
   };
 
   // --- SORTING LOGIC ---
-  let visibleTasks = tasks.filter((t) => !t.isCompleted && !t.isSomeday);
-  
-  // If Filtering by Project
-  if (filterProject) {
-    visibleTasks = visibleTasks.filter(t => t.project === filterProject);
-    // Strict Step Sorting for Project View (1 -> 2 -> 3)
-    visibleTasks.sort((a, b) => (a.step || 999) - (b.step || 999));
-  } else {
-    // Standard Dashboard Sorting
-    visibleTasks.sort((a, b) => {
-        // 1. Urgency First
+  const visibleTasks = useMemo(() => {
+    let pool = tasks.filter((t) => !t.isCompleted && !t.isSomeday);
+    
+    // Project View Sorting (Strict Steps)
+    if (filterProject) {
+      return pool
+        .filter(t => t.project === filterProject)
+        .sort((a, b) => (a.step || 999) - (b.step || 999));
+    }
+
+    // Dashboard Sorting (Date Priority > Urgency > Project)
+    return pool.sort((a, b) => {
+        // 1. Due Date Priority (Overdue/Today first)
+        if (a.dueDate && !b.dueDate) return -1; // Has date goes top
+        if (!a.dueDate && b.dueDate) return 1;  // No date goes bottom
+        if (a.dueDate && b.dueDate) {
+            // Compare dates
+            const dateA = new Date(a.dueDate);
+            const dateB = new Date(b.dueDate);
+            if (dateA !== dateB) return dateA - dateB;
+        }
+
+        // 2. Urgency
         if (a.isUrgent && !b.isUrgent) return -1;
         if (!a.isUrgent && b.isUrgent) return 1;
-        
-        // 2. Due Date
-        if (a.dueDate && !b.dueDate) return -1;
-        if (!a.dueDate && b.dueDate) return 1;
-        if (a.dueDate && b.dueDate && a.dueDate !== b.dueDate) return a.dueDate.localeCompare(b.dueDate);
 
-        // 3. Project Grouping + Step Order (This fixes the "Pop First" request)
+        // 3. Project Grouping
         if (a.project === b.project) {
             return (a.step || 999) - (b.step || 999);
         }
         
         return 0;
     });
-  }
+  }, [tasks, filterProject]);
 
   const somedayTasks = tasks.filter((t) => !t.isCompleted && t.isSomeday);
 
+  // Project Progress Calculation
+  const projectStats = useMemo(() => {
+    if (!filterProject) return null;
+    const projectTasks = tasks.filter(t => t.project === filterProject);
+    const total = projectTasks.length;
+    const completed = projectTasks.filter(t => t.isCompleted).length;
+    const progress = total === 0 ? 0 : Math.round((completed / total) * 100);
+    return { total, completed, progress };
+  }, [tasks, filterProject]);
+
   // Helper for Input Clearing
   const ClearButton = ({ onClick }) => (
-    <button type="button" onClick={onClick} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors z-10">
-        <XCircle size={18} />
+    <button type="button" onClick={onClick} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-rose-500 transition-colors z-10 p-1">
+        <XCircle size={20} />
     </button>
   );
 
@@ -208,139 +236,184 @@ function Dashboard({ user, onLogout }) {
 
   return (
     <div className="w-full max-w-3xl mx-auto p-6 pb-48">
+      
       {/* HEADER */}
-      <div className="flex justify-between items-center mb-10 mt-4">
+      <div className="flex justify-between items-center mb-8 mt-4">
         <div className="text-left">
-        <h1 className="text-2xl font-black text-slate-900">
+          {!filterProject ? (
+            <h1 className="text-2xl font-black text-slate-900">
   <span className="text-indigo-500">ADHD</span> Focus Mate
   <span className="text-indigo-500">.</span>
 </h1>
-          <p className="text-slate-500 text-sm">Hello, {user.email}</p>
+          ) : (
+            <button onClick={() => setFilterProject(null)} className="flex items-center gap-2 text-slate-500 hover:text-slate-800 font-bold transition-colors">
+                <ArrowLeft size={20} /> Back to Dashboard
+            </button>
+          )}
         </div>
         <button onClick={onLogout} className="p-2 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-all">
           <LogOut size={20} />
         </button>
       </div>
 
-      {/* FILTER BANNER */}
-      {filterProject && (
-        <div className="mb-8 bg-indigo-600 text-white p-4 rounded-2xl shadow-lg shadow-indigo-200 flex items-center justify-between animate-in slide-in-from-top-4">
-            <div className="flex items-center gap-3">
-                <LayoutGrid className="text-indigo-200" />
-                <div>
-                    <div className="text-indigo-200 text-xs font-bold uppercase tracking-wider">Viewing Project</div>
-                    <div className="font-black text-xl">{filterProject}</div>
+      {/* --- PROJECT WORKSPACE VIEW --- */}
+      {filterProject ? (
+        <div className="animate-in slide-in-from-right-4 fade-in duration-300">
+            <div className="bg-indigo-600 rounded-3xl p-8 text-white shadow-xl shadow-indigo-200 mb-8 relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-12 bg-white/5 rounded-full blur-3xl transform translate-x-10 -translate-y-10"></div>
+                <div className="relative z-10">
+                    <div className="flex items-center gap-3 mb-2">
+                        <ListTodo className="text-indigo-200" />
+                        <span className="text-indigo-200 font-bold uppercase tracking-widest text-xs">Project Workspace</span>
+                    </div>
+                    <h1 className="text-4xl font-black mb-6">{filterProject}</h1>
+                    
+                    {/* Progress Bar */}
+                    <div className="bg-black/20 h-4 rounded-full overflow-hidden mb-2">
+                        <div 
+                            className="bg-white h-full transition-all duration-1000 ease-out" 
+                            style={{ width: `${projectStats.progress}%` }} 
+                        />
+                    </div>
+                    <div className="flex justify-between text-sm font-medium text-indigo-100">
+                        <span>{projectStats.progress}% Complete</span>
+                        <span>{projectStats.completed} / {projectStats.total} Steps</span>
+                    </div>
                 </div>
             </div>
-            <button onClick={() => setFilterProject(null)} className="bg-white/10 hover:bg-white/20 p-2 rounded-lg transition-colors flex items-center gap-2 text-sm font-bold">
-                <ArrowLeft size={16} /> Back to All
-            </button>
+            
+            <div className="mb-6 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-slate-800">Next Steps</h2>
+                <span className="text-sm font-bold text-slate-400">Sorted by Step #</span>
+            </div>
+        </div>
+      ) : (
+        /* --- DASHBOARD VIEW --- */
+        <div className="mb-12">
+            <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 mb-12">
+                <div className="flex items-center gap-3 mb-6">
+                <div className="bg-indigo-50 p-2.5 rounded-xl"><Flame className="text-indigo-600 w-6 h-6" /></div>
+                <h2 className="text-2xl font-bold text-slate-900">Brain Dump</h2>
+                </div>
+
+                <form onSubmit={(e) => handleAdd(e, false)} className="space-y-6">
+                <div className="relative">
+                    <input 
+                        className="w-full p-4 pr-12 text-lg border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400" 
+                        placeholder="What needs to be done?" 
+                        value={formData.content} 
+                        onChange={(e) => setFormData({...formData, content: e.target.value})} 
+                        autoFocus 
+                    />
+                    {formData.content && <ClearButton onClick={() => setFormData({...formData, content: ""})} />}
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-4">
+                    <div className="relative flex-[2]">
+                        <input 
+                            className="w-full p-4 pr-12 text-lg border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400" 
+                            placeholder="Project Name (Optional)" 
+                            value={formData.project} 
+                            onChange={(e) => setFormData({...formData, project: e.target.value})} 
+                        />
+                        {formData.project && <ClearButton onClick={() => setFormData({...formData, project: ""})} />}
+                    </div>
+                    <div className="relative flex-1">
+                        <input 
+                            type="number" min="1" 
+                            className="w-full p-4 pr-12 text-lg border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400" 
+                            placeholder="Step #" 
+                            value={formData.step} 
+                            onChange={(e) => setFormData({...formData, step: e.target.value})} 
+                        />
+                        {formData.step && <ClearButton onClick={() => setFormData({...formData, step: ""})} />}
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                    <label className="block text-sm font-bold text-slate-500 mb-2 uppercase tracking-wider">Target Date</label>
+                    <div className="flex items-center gap-2 p-3 border border-slate-200 rounded-xl bg-white h-[60px] relative">
+                        <Calendar className="text-slate-400 ml-2" />
+                        <input type="date" className="w-full outline-none text-slate-600 font-medium bg-transparent uppercase" value={formData.dueDate} onChange={(e) => setFormData({...formData, dueDate: e.target.value})} />
+                        {formData.dueDate && (
+                             <button type="button" onClick={() => setFormData({...formData, dueDate: ""})} className="absolute right-2 p-2 hover:bg-rose-50 hover:text-rose-500 rounded-full text-slate-300 transition-colors">
+                                <X size={18} />
+                            </button>
+                        )}
+                    </div>
+                    </div>
+                    <div>
+                    <label className="block text-sm font-bold text-slate-500 mb-2 uppercase tracking-wider">Priority Level</label>
+                    <div className="flex items-center justify-between p-3 border border-slate-200 rounded-xl bg-white h-[60px]">
+                        <div className="flex items-center gap-3">
+                        <Zap className={cn("w-5 h-5 ml-2", formData.isUrgent ? "text-amber-500 fill-amber-500" : "text-slate-300")} />
+                        <span className="font-bold text-slate-700">Urgent?</span>
+                        </div>
+                        <button type="button" onClick={() => setFormData({...formData, isUrgent: !formData.isUrgent})} className={cn("w-12 h-7 rounded-full transition-colors relative", formData.isUrgent ? "bg-slate-900" : "bg-slate-200")}>
+                        <div className={cn("w-5 h-5 bg-white rounded-full absolute top-1 transition-transform", formData.isUrgent ? "left-6" : "left-1")} />
+                        </button>
+                    </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-bold text-slate-500 mb-3 uppercase tracking-wider">Energy Required</label>
+                    <div className="flex gap-2">
+                    {[
+                        { id: "low", label: "LOW", icon: Battery, activeClass: "bg-emerald-100 border-emerald-400 text-emerald-800 ring-2 ring-emerald-200" },
+                        { id: "medium", label: "MED", icon: BatteryMedium, activeClass: "bg-amber-100 border-amber-400 text-amber-800 ring-2 ring-amber-200" },
+                        { id: "high", label: "HIGH", icon: BatteryFull, activeClass: "bg-rose-100 border-rose-400 text-rose-800 ring-2 ring-rose-200" }
+                    ].map((opt) => (
+                        <button key={opt.id} type="button" onClick={() => setFormData({...formData, energy: opt.id})} className={cn("flex-1 py-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all", formData.energy === opt.id ? opt.activeClass : "bg-white border-slate-200 text-slate-400 hover:bg-slate-50")}>
+                        <opt.icon size={20} />
+                        <span className="text-[10px] font-bold tracking-wider">{opt.label}</span>
+                        </button>
+                    ))}
+                    </div>
+                </div>
+
+                <div className="space-y-3 pt-4">
+                    <button type="submit" className="w-full bg-slate-900 text-white font-bold text-lg py-4 rounded-xl hover:bg-slate-800 transition-transform active:scale-[0.98] flex items-center justify-center gap-2 shadow-xl shadow-slate-900/10"><Plus size={20} /> Add to Bucket</button>
+                    <button type="button" onClick={(e) => handleAdd(e, true)} className="w-full bg-slate-100 text-slate-500 font-bold text-lg py-3 rounded-xl hover:bg-slate-200 hover:text-slate-700 transition-colors flex items-center justify-center gap-2"><Archive size={20} /> Move to Someday</button>
+                </div>
+                </form>
+            </div>
+
+            <div className="flex items-center gap-3 mb-6 px-2">
+                <div className="bg-indigo-100 p-2 rounded-lg"><Inbox className="w-5 h-5 text-indigo-600" /></div>
+                <h2 className="text-2xl font-bold text-slate-900">Your Bucket</h2>
+                <span className="bg-slate-200 text-slate-600 px-3 py-1 rounded-full text-sm font-bold">{visibleTasks.length}</span>
+            </div>
         </div>
       )}
 
-      {/* BRAIN DUMP (Hide when filtering project) */}
-      {!filterProject && (
-      <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 mb-12">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="bg-indigo-50 p-2.5 rounded-xl"><Flame className="text-indigo-600 w-6 h-6" /></div>
-          <h2 className="text-2xl font-bold text-slate-900">Brain Dump</h2>
-        </div>
-
-        <form onSubmit={(e) => handleAdd(e, false)} className="space-y-6">
-          <div className="relative">
+      {/* QUICK ADD IN PROJECT MODE */}
+      {filterProject && (
+          <form onSubmit={(e) => handleAdd(e, false)} className="mb-6 flex gap-2">
             <input 
-                className="w-full p-4 pr-12 text-lg border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400" 
-                placeholder="What's weighing on your mind?" 
-                value={formData.content} 
-                onChange={(e) => setFormData({...formData, content: e.target.value})} 
-                autoFocus 
+                className="flex-1 p-4 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20" 
+                placeholder={`Add next step for ${filterProject}...`}
+                value={formData.content}
+                onChange={e => setFormData({...formData, content: e.target.value})}
+                autoFocus
             />
-            {formData.content && <ClearButton onClick={() => setFormData({...formData, content: ""})} />}
-          </div>
-
-          <div className="flex flex-col md:flex-row gap-4">
-             <div className="relative flex-[2]">
-                <input 
-                    className="w-full p-4 pr-12 text-lg border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400" 
-                    placeholder="Project Name (Optional)" 
-                    value={formData.project} 
-                    onChange={(e) => setFormData({...formData, project: e.target.value})} 
-                />
-                {formData.project && <ClearButton onClick={() => setFormData({...formData, project: ""})} />}
-             </div>
-             <div className="relative flex-1">
-                <input 
-                    type="number" min="1" 
-                    className="w-full p-4 pr-12 text-lg border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400" 
-                    placeholder="Step #" 
-                    value={formData.step} 
-                    onChange={(e) => setFormData({...formData, step: e.target.value})} 
-                />
-                {formData.step && <ClearButton onClick={() => setFormData({...formData, step: ""})} />}
-             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-bold text-slate-500 mb-2 uppercase tracking-wider">Target Date</label>
-              <div className="flex items-center gap-2 p-3 border border-slate-200 rounded-xl bg-white h-[60px] relative">
-                <Calendar className="text-slate-400 ml-2" />
-                <input type="date" className="w-full outline-none text-slate-600 font-medium bg-transparent uppercase" value={formData.dueDate} onChange={(e) => setFormData({...formData, dueDate: e.target.value})} />
-                {formData.dueDate && (
-                    <button type="button" onClick={() => setFormData({...formData, dueDate: ""})} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-colors">
-                        <X size={16} />
-                    </button>
-                )}
-              </div>
-            </div>
-            <div>
-               <label className="block text-sm font-bold text-slate-500 mb-2 uppercase tracking-wider">Priority Level</label>
-               <div className="flex items-center justify-between p-3 border border-slate-200 rounded-xl bg-white h-[60px]">
-                 <div className="flex items-center gap-3">
-                   <Zap className={cn("w-5 h-5 ml-2", formData.isUrgent ? "text-amber-500 fill-amber-500" : "text-slate-300")} />
-                   <span className="font-bold text-slate-700">Urgent?</span>
-                 </div>
-                 <button type="button" onClick={() => setFormData({...formData, isUrgent: !formData.isUrgent})} className={cn("w-12 h-7 rounded-full transition-colors relative", formData.isUrgent ? "bg-slate-900" : "bg-slate-200")}>
-                   <div className={cn("w-5 h-5 bg-white rounded-full absolute top-1 transition-transform", formData.isUrgent ? "left-6" : "left-1")} />
-                 </button>
-               </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-bold text-slate-500 mb-3 uppercase tracking-wider">Energy Required</label>
-            <div className="flex gap-2">
-              {[
-                { id: "low", label: "LOW", icon: Battery, activeClass: "bg-emerald-100 border-emerald-400 text-emerald-800 ring-2 ring-emerald-200" },
-                { id: "medium", label: "MED", icon: BatteryMedium, activeClass: "bg-amber-100 border-amber-400 text-amber-800 ring-2 ring-amber-200" },
-                { id: "high", label: "HIGH", icon: BatteryFull, activeClass: "bg-rose-100 border-rose-400 text-rose-800 ring-2 ring-rose-200" }
-              ].map((opt) => (
-                <button key={opt.id} type="button" onClick={() => setFormData({...formData, energy: opt.id})} className={cn("flex-1 py-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all", formData.energy === opt.id ? opt.activeClass : "bg-white border-slate-200 text-slate-400 hover:bg-slate-50")}>
-                  <opt.icon size={20} />
-                  <span className="text-[10px] font-bold tracking-wider">{opt.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-3 pt-4">
-            <button type="submit" className="w-full bg-slate-900 text-white font-bold text-lg py-4 rounded-xl hover:bg-slate-800 transition-transform active:scale-[0.98] flex items-center justify-center gap-2 shadow-xl shadow-slate-900/10"><Plus size={20} /> Add to Bucket</button>
-            <button type="button" onClick={(e) => handleAdd(e, true)} className="w-full bg-slate-100 text-slate-500 font-bold text-lg py-3 rounded-xl hover:bg-slate-200 hover:text-slate-700 transition-colors flex items-center justify-center gap-2"><Archive size={20} /> Move to Someday</button>
-          </div>
-        </form>
-      </div>
+             <input 
+                type="number" min="1"
+                className="w-20 p-4 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20" 
+                placeholder="#"
+                value={formData.step}
+                onChange={e => setFormData({...formData, step: e.target.value})}
+            />
+            <button type="submit" className="bg-indigo-600 text-white p-4 rounded-xl font-bold hover:bg-indigo-700 transition-colors">
+                <Plus />
+            </button>
+          </form>
       )}
-
-      {/* LIST HEADER */}
-      <div className="flex items-center gap-3 mb-6 px-2">
-        <div className="bg-indigo-100 p-2 rounded-lg"><Inbox className="w-5 h-5 text-indigo-600" /></div>
-        <h2 className="text-2xl font-bold text-slate-900">{filterProject ? "Project Steps" : "Your Bucket"}</h2>
-        <span className="bg-slate-200 text-slate-600 px-3 py-1 rounded-full text-sm font-bold">{visibleTasks.length}</span>
-      </div>
 
       {/* TASK LIST */}
       <div className="space-y-4">
-        <AnimatePresence>
+        <AnimatePresence mode="popLayout">
           {visibleTasks.map((task) => (
             <TaskCard 
                 key={task.id} 
@@ -355,7 +428,7 @@ function Dashboard({ user, onLogout }) {
         {visibleTasks.length === 0 && (
           <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-3xl">
              <div className="text-4xl mb-2">{filterProject ? "🏁" : "🎉"}</div>
-             <p className="text-slate-400 font-medium">{filterProject ? "No steps left in this project!" : "All caught up!"}</p>
+             <p className="text-slate-400 font-medium">{filterProject ? "Project complete!" : "All caught up!"}</p>
           </div>
         )}
       </div>
@@ -376,9 +449,9 @@ function Dashboard({ user, onLogout }) {
       )}
 
       {/* BOTTOM BAR */}
-      <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white/95 to-transparent pt-12">
-        <div className="max-w-3xl mx-auto flex gap-4">
-          <button onClick={() => setFocusMode({ isOpen: true, mode: "tired" })} className="flex-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 py-4 rounded-2xl flex flex-col items-center gap-1 transition-transform hover:-translate-y-1">
+      <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white/95 to-transparent pt-12 pointer-events-none">
+        <div className="max-w-3xl mx-auto flex gap-4 pointer-events-auto">
+          <button onClick={() => setFocusMode({ isOpen: true, mode: "tired" })} className="flex-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 py-4 rounded-2xl flex flex-col items-center gap-1 transition-transform hover:-translate-y-1 shadow-lg shadow-emerald-900/10">
             <div className="flex items-center gap-2 font-bold text-lg"><Battery className="w-5 h-5" /> I'm Tired</div>
             <span className="text-xs opacity-75 font-medium">Low Energy Mode</span>
           </button>
@@ -451,7 +524,7 @@ function TaskCard({ task, onDelete, onEdit, onProjectClick }) {
 
   return (
     <motion.div layout initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0}} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-start gap-4 group hover:border-indigo-200 transition-all">
-      <div className={cn("mt-1 p-2 rounded-full", task.isUrgent ? "bg-rose-50" : "bg-slate-50")}>
+      <div className={cn("mt-1 p-2 rounded-full flex-shrink-0", task.isUrgent ? "bg-rose-50" : "bg-slate-50")}>
         {task.isUrgent ? <Zap className="w-5 h-5 text-rose-500 fill-rose-500" /> : <div className="w-5 h-5 rounded-full border-2 border-slate-300" />}
       </div>
       <div className="flex-1 min-w-0">
@@ -465,14 +538,14 @@ function TaskCard({ task, onDelete, onEdit, onProjectClick }) {
            {task.project && (
              <button 
                 onClick={() => onProjectClick(task.project)}
-                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200 hover:bg-indigo-100 hover:text-indigo-700 hover:border-indigo-200 transition-colors cursor-pointer"
+                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all cursor-pointer"
              >
                {task.project} {task.step ? `(Step ${task.step})` : ""}
              </button>
            )}
            
            {task.dueDate && (
-             <div className={cn("inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold border", isOverdue ? "bg-red-50 text-red-600 border-red-200" : isToday ? "bg-amber-50 text-amber-600 border-amber-200" : "bg-slate-50 text-slate-500 border-slate-200")}>
+             <div className={cn("inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold border", isOverdue ? "bg-red-50 text-red-600 border-red-200 animate-pulse" : isToday ? "bg-amber-50 text-amber-600 border-amber-200" : "bg-slate-50 text-slate-500 border-slate-200")}>
                <Clock size={12} /> {task.dueDate}
              </div>
            )}
@@ -515,6 +588,7 @@ function FocusOverlay({ isOpen, onClose, tasks, mode, onComplete }) {
 
     if (pool.length === 0) { setActiveTask(null); return; }
     
+    // URGENCY LOGIC FOR FOCUS MODE
     const urgent = pool.filter(t => t.isUrgent || (t.dueDate && new Date(t.dueDate) < new Date()));
     setActiveTask(urgent.length > 0 ? urgent[Math.floor(Math.random() * urgent.length)] : pool[Math.floor(Math.random() * pool.length)]);
   };
