@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   Battery, BatteryCharging, BatteryFull, BatteryMedium, 
   Inbox, Zap, Plus, X, CheckCircle2, Flame, Loader2, Trash2, Pencil, Save, Calendar, Archive,
-  Clock, LogOut, LayoutGrid, Mail, ArrowLeft, XCircle, ListTodo, Check
+  Clock, LogOut, LayoutGrid, Mail, ArrowLeft, XCircle, ListTodo, Check, ChevronDown, ChevronUp
 } from "lucide-react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -23,8 +23,6 @@ import {
 } from "firebase/auth";
 
 // --- CONFIGURATION ---
-
-// --- CONFIGURATION ---
 const API_URL = "https://focus-mate-final-v3.onrender.com"; 
 const cn = (...inputs) => twMerge(clsx(inputs));
 
@@ -38,7 +36,6 @@ const firebaseConfig = {
 };
 // ------------------------------------------------------------------
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
@@ -139,27 +136,26 @@ function Dashboard({ user, onLogout }) {
     if (e) e.preventDefault();
     if (!formData.content.trim()) return;
 
-    // If we are in "Project View", automatically add to that project
     const finalProject = filterProject || formData.project;
 
     const payload = { 
       ...formData, 
       project: finalProject,
       isSomeday: asSomeday,
-      step: formData.step ? parseInt(formData.step) : null
+      step: formData.step ? parseInt(formData.step) : null,
+      subtasks: [] // Initialize empty subtasks
     };
 
     axios.post(`${API_URL}/tasks`, payload, { headers: { "x-user-id": user.uid } })
       .then(() => {
         refreshTasks();
-        // Clear form but keep project if in project view
         setFormData({ 
           ...formData, 
           content: "", 
           isUrgent: false, 
           dueDate: "", 
           step: "",
-          project: filterProject ? "" : formData.project // Clear input visual only
+          project: filterProject ? "" : formData.project 
         });
       });
   };
@@ -170,33 +166,20 @@ function Dashboard({ user, onLogout }) {
       .then(refreshTasks);
   };
 
-  const handleEdit = (updatedTask) => {
+  const handleUpdate = (updatedTask) => {
     axios.put(`${API_URL}/tasks/${updatedTask.id}`, updatedTask, { headers: { "x-user-id": user.uid } })
-      .then(refreshTasks);
-  };
-
-  const handleComplete = (task) => {
-    // Add visual confetti
-    confetti({ particleCount: 50, spread: 50, origin: { y: 0.6 } });
-    
-    axios.put(`${API_URL}/tasks/${task.id}`, { ...task, isCompleted: true }, { headers: { "x-user-id": user.uid } })
       .then(refreshTasks);
   };
 
   // --- SORTING LOGIC ---
   const visibleTasks = useMemo(() => {
     let pool = tasks.filter((t) => !t.isCompleted && !t.isSomeday);
-    
-    // Project View Sorting (Strict Steps)
     if (filterProject) {
       return pool
         .filter(t => t.project === filterProject)
         .sort((a, b) => (a.step || 999) - (b.step || 999));
     }
-
-    // Dashboard Sorting (Date Priority > Urgency > Project)
     return pool.sort((a, b) => {
-        // 1. Due Date Priority (Overdue/Today first)
         if (a.dueDate && !b.dueDate) return -1; 
         if (!a.dueDate && b.dueDate) return 1;  
         if (a.dueDate && b.dueDate) {
@@ -204,23 +187,15 @@ function Dashboard({ user, onLogout }) {
             const dateB = new Date(b.dueDate);
             if (dateA !== dateB) return dateA - dateB;
         }
-
-        // 2. Urgency
         if (a.isUrgent && !b.isUrgent) return -1;
         if (!a.isUrgent && b.isUrgent) return 1;
-
-        // 3. Project Grouping
-        if (a.project === b.project) {
-            return (a.step || 999) - (b.step || 999);
-        }
-        
+        if (a.project === b.project) return (a.step || 999) - (b.step || 999);
         return 0;
     });
   }, [tasks, filterProject]);
 
   const somedayTasks = tasks.filter((t) => !t.isCompleted && t.isSomeday);
 
-  // Project Progress Calculation
   const projectStats = useMemo(() => {
     if (!filterProject) return null;
     const projectTasks = tasks.filter(t => t.project === filterProject);
@@ -230,7 +205,6 @@ function Dashboard({ user, onLogout }) {
     return { total, completed, progress };
   }, [tasks, filterProject]);
 
-  // Helper for Input Clearing
   const ClearButton = ({ onClick }) => (
     <button type="button" onClick={onClick} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-rose-500 transition-colors z-10 p-1">
         <XCircle size={20} />
@@ -246,7 +220,13 @@ function Dashboard({ user, onLogout }) {
       <div className="flex justify-between items-center mb-8 mt-4">
         <div className="text-left">
           {!filterProject ? (
-            <h1 className="text-2xl font-black text-slate-900"><span className="text-indigo-500">ADHD</span> Focus Mate<span className="text-indigo-500">.</span></h1>
+            <div>
+                <h1 className="text-2xl font-black text-slate-900">
+                  <span className="text-indigo-500">ADHD</span> Focus Mate<span className="text-indigo-500">.</span>
+                </h1>
+                {/* RESTORED USERNAME HERE */}
+                <p className="text-slate-500 text-sm font-medium mt-1">Hello, {user.email}</p>
+            </div>
           ) : (
             <button onClick={() => setFilterProject(null)} className="flex items-center gap-2 text-slate-500 hover:text-slate-800 font-bold transition-colors">
                 <ArrowLeft size={20} /> Back to Dashboard
@@ -269,13 +249,8 @@ function Dashboard({ user, onLogout }) {
                         <span className="text-indigo-200 font-bold uppercase tracking-widest text-xs">Project Workspace</span>
                     </div>
                     <h1 className="text-4xl font-black mb-6">{filterProject}</h1>
-                    
-                    {/* Progress Bar */}
                     <div className="bg-black/20 h-4 rounded-full overflow-hidden mb-2">
-                        <div 
-                            className="bg-white h-full transition-all duration-1000 ease-out" 
-                            style={{ width: `${projectStats.progress}%` }} 
-                        />
+                        <div className="bg-white h-full transition-all duration-1000 ease-out" style={{ width: `${projectStats.progress}%` }} />
                     </div>
                     <div className="flex justify-between text-sm font-medium text-indigo-100">
                         <span>{projectStats.progress}% Complete</span>
@@ -421,9 +396,8 @@ function Dashboard({ user, onLogout }) {
                 key={task.id} 
                 task={task} 
                 onDelete={() => handleDelete(task.id)} 
-                onEdit={handleEdit} 
+                onUpdate={handleUpdate}
                 onProjectClick={(p) => setFilterProject(p)} 
-                onComplete={handleComplete}
             />
           ))}
         </AnimatePresence>
@@ -436,7 +410,6 @@ function Dashboard({ user, onLogout }) {
         )}
       </div>
 
-      {/* SOMEDAY SECTION (Hide if filtering) */}
       {!filterProject && somedayTasks.length > 0 && (
         <div className="mt-12 pt-12 border-t border-slate-200 opacity-60 hover:opacity-100 transition-opacity">
            <div className="flex items-center gap-3 mb-6 px-2">
@@ -445,7 +418,7 @@ function Dashboard({ user, onLogout }) {
            </div>
            <div className="space-y-4">
              {somedayTasks.map((task) => (
-               <TaskCard key={task.id} task={task} onDelete={() => handleDelete(task.id)} onEdit={handleEdit} onProjectClick={(p) => setFilterProject(p)} onComplete={handleComplete} />
+               <TaskCard key={task.id} task={task} onDelete={() => handleDelete(task.id)} onUpdate={handleUpdate} onProjectClick={(p) => setFilterProject(p)} />
              ))}
            </div>
         </div>
@@ -465,18 +438,42 @@ function Dashboard({ user, onLogout }) {
         </div>
       </div>
 
-      <FocusOverlay isOpen={focusMode.isOpen} onClose={() => setFocusMode({...focusMode, isOpen: false})} tasks={tasks} mode={focusMode.mode} onComplete={handleComplete} />
+      <FocusOverlay isOpen={focusMode.isOpen} onClose={() => setFocusMode({...focusMode, isOpen: false})} tasks={tasks} mode={focusMode.mode} onComplete={(t) => handleUpdate({...t, isCompleted: true})} />
     </div>
   );
 }
 
 // --- SUB COMPONENTS ---
 
-function TaskCard({ task, onDelete, onEdit, onProjectClick, onComplete }) {
+function TaskCard({ task, onDelete, onUpdate, onProjectClick }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState(task);
+  const [newSubtask, setNewSubtask] = useState("");
+  const [showSubtasks, setShowSubtasks] = useState(false);
 
-  const handleSave = () => { onEdit(editData); setIsEditing(false); };
+  const handleSave = () => { onUpdate(editData); setIsEditing(false); };
+  
+  // SUBTASK HANDLERS
+  const addSubtask = (e) => {
+    e.preventDefault();
+    if(!newSubtask.trim()) return;
+    const newItem = { id: crypto.randomUUID(), content: newSubtask, isCompleted: false };
+    const updated = { ...task, subtasks: [...(task.subtasks || []), newItem] };
+    onUpdate(updated);
+    setNewSubtask("");
+    setShowSubtasks(true);
+  };
+
+  const toggleSubtask = (subId) => {
+    const updatedSub = task.subtasks.map(s => s.id === subId ? {...s, isCompleted: !s.isCompleted} : s);
+    onUpdate({ ...task, subtasks: updatedSub });
+  };
+
+  const deleteSubtask = (subId) => {
+    const updatedSub = task.subtasks.filter(s => s.id !== subId);
+    onUpdate({ ...task, subtasks: updatedSub });
+  };
+
   const getPillStyle = (energy) => {
     if (energy === 'high') return "bg-rose-100 text-rose-700";
     if (energy === 'medium') return "bg-amber-100 text-amber-700";
@@ -493,18 +490,15 @@ function TaskCard({ task, onDelete, onEdit, onProjectClick, onComplete }) {
        <div className="bg-white p-5 rounded-2xl border-2 border-indigo-500 shadow-md space-y-4">
          <div className="relative">
             <input className="w-full text-lg font-bold border-b border-slate-200 focus:outline-none pb-2 pr-8" value={editData.content} onChange={e => setEditData({...editData, content: e.target.value})} autoFocus />
-            {editData.content && <button onClick={() => setEditData({...editData, content: ""})} className="absolute right-0 top-0 text-slate-300 hover:text-rose-500"><XCircle size={18} /></button>}
          </div>
          <div className="flex gap-4">
            <div className="flex-1 relative">
              <label className="text-xs font-bold text-slate-400 uppercase">Due Date</label>
              <input type="date" className="w-full p-2 border rounded" value={editData.dueDate || ""} onChange={e => setEditData({...editData, dueDate: e.target.value})} />
-             {editData.dueDate && <button onClick={() => setEditData({...editData, dueDate: ""})} className="absolute right-2 top-7 text-slate-300 hover:text-rose-500"><X size={14} /></button>}
            </div>
            <div className="w-24 relative">
              <label className="text-xs font-bold text-slate-400 uppercase">Step</label>
              <input type="number" min="1" className="w-full p-2 border rounded" placeholder="#" value={editData.step || ""} onChange={e => setEditData({...editData, step: parseInt(e.target.value)})} />
-             {editData.step && <button onClick={() => setEditData({...editData, step: ""})} className="absolute right-2 top-7 text-slate-300 hover:text-rose-500"><X size={14} /></button>}
            </div>
          </div>
          <div className="flex flex-wrap gap-2">
@@ -512,7 +506,6 @@ function TaskCard({ task, onDelete, onEdit, onProjectClick, onComplete }) {
              <button key={lvl} onClick={() => setEditData({...editData, energy: lvl})} className={cn("px-3 py-1 rounded-full text-xs font-bold uppercase border", editData.energy === lvl ? getPillStyle(lvl) + " border-transparent" : "bg-white border-slate-200 text-slate-400")}>{lvl}</button>
            ))}
            <button onClick={() => setEditData({...editData, isUrgent: !editData.isUrgent})} className={cn("px-3 py-1 rounded-full text-xs font-bold border", editData.isUrgent ? "bg-rose-500 text-white border-rose-500" : "bg-white text-slate-400")}>Urgent</button>
-           <button onClick={() => setEditData({...editData, isSomeday: !editData.isSomeday})} className={cn("px-3 py-1 rounded-full text-xs font-bold border", editData.isSomeday ? "bg-indigo-500 text-white border-indigo-500" : "bg-white text-slate-400")}>Someday</button>
          </div>
          <div className="flex justify-end gap-2">
            <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-slate-400 font-bold hover:bg-slate-50 rounded-lg">Cancel</button>
@@ -524,52 +517,89 @@ function TaskCard({ task, onDelete, onEdit, onProjectClick, onComplete }) {
 
   const isOverdue = task.dueDate && new Date(task.dueDate) < new Date().setHours(0,0,0,0);
   const isToday = task.dueDate && new Date(task.dueDate).toDateString() === new Date().toDateString();
+  const subtasks = task.subtasks || [];
+  const completedSub = subtasks.filter(s => s.isCompleted).length;
 
   return (
-    <motion.div layout initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0}} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-start gap-4 group hover:border-indigo-200 transition-all">
-      
-      {/* --- QUICK COMPLETE CHECKBOX --- */}
-      <button 
-        onClick={() => onComplete(task)}
-        className="mt-1 w-6 h-6 rounded-full border-2 border-slate-300 hover:border-emerald-500 hover:bg-emerald-50 text-transparent hover:text-emerald-500 flex items-center justify-center transition-all flex-shrink-0 group/check"
-      >
-        <Check size={14} strokeWidth={3} className="scale-0 group-hover/check:scale-100 transition-transform" />
-      </button>
+    <motion.div layout initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0}} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:border-indigo-200 transition-all">
+      <div className="flex items-start gap-4">
+        {/* Main Checkbox */}
+        <button 
+            onClick={() => {
+                confetti({ particleCount: 50, spread: 50, origin: { y: 0.6 } });
+                onUpdate({...task, isCompleted: true});
+            }}
+            className="mt-1 w-6 h-6 rounded-full border-2 border-slate-300 hover:border-emerald-500 hover:bg-emerald-50 text-transparent hover:text-emerald-500 flex items-center justify-center transition-all flex-shrink-0 group/check"
+        >
+            <Check size={14} strokeWidth={3} className="scale-0 group-hover/check:scale-100 transition-transform" />
+        </button>
 
-      {/* Urgency Indicator (If Urgent) */}
-      {task.isUrgent && (
-          <div className="mt-1 -ml-2 p-1 bg-rose-50 rounded-full animate-in zoom-in duration-300">
-             <Zap className="w-4 h-4 text-rose-500 fill-rose-500" />
-          </div>
-      )}
+        <div className="flex-1 min-w-0">
+            <h3 className={cn("font-bold text-slate-800 text-lg leading-tight mb-2 break-words", task.isSomeday && "text-slate-500")}>{task.content}</h3>
+            
+            <div className="flex flex-wrap gap-2 mb-2">
+                {task.isUrgent && <div className="p-1 bg-rose-50 rounded-full"><Zap className="w-3 h-3 text-rose-500 fill-rose-500" /></div>}
+                <div className={cn("inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide", getPillStyle(task.energy))}>
+                    {getIcon(task.energy)} {task.energy}
+                </div>
+                {task.project && (
+                    <button onClick={() => onProjectClick(task.project)} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all cursor-pointer">
+                        {task.project} {task.step ? `(#${task.step})` : ""}
+                    </button>
+                )}
+                {task.dueDate && (
+                    <div className={cn("inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold border", isOverdue ? "bg-red-50 text-red-600 border-red-200" : isToday ? "bg-amber-50 text-amber-600 border-amber-200" : "bg-slate-50 text-slate-500 border-slate-200")}>
+                        <Clock size={12} /> {task.dueDate}
+                    </div>
+                )}
+            </div>
 
-      <div className="flex-1 min-w-0">
-        <h3 className={cn("font-bold text-slate-800 text-lg leading-tight mb-2 break-words", task.isSomeday && "text-slate-500")}>{task.content}</h3>
-        <div className="flex flex-wrap gap-2">
-           <div className={cn("inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide", getPillStyle(task.energy))}>
-             {getIcon(task.energy)} {task.energy} Energy
-           </div>
-           
-           {/* CLICKABLE PROJECT PILL */}
-           {task.project && (
-             <button 
-                onClick={() => onProjectClick(task.project)}
-                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all cursor-pointer"
-             >
-               {task.project} {task.step ? `(Step ${task.step})` : ""}
-             </button>
-           )}
-           
-           {task.dueDate && (
-             <div className={cn("inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold border", isOverdue ? "bg-red-50 text-red-600 border-red-200 animate-pulse" : isToday ? "bg-amber-50 text-amber-600 border-amber-200" : "bg-slate-50 text-slate-500 border-slate-200")}>
-               <Clock size={12} /> {task.dueDate}
-             </div>
-           )}
+            {/* SUBTASK PROGRESS */}
+            {subtasks.length > 0 && (
+                <div className="flex items-center gap-2 mt-3 cursor-pointer" onClick={() => setShowSubtasks(!showSubtasks)}>
+                    <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-indigo-500 transition-all duration-500" style={{ width: `${(completedSub / subtasks.length) * 100}%` }} />
+                    </div>
+                    <span className="text-xs font-bold text-slate-400">{completedSub}/{subtasks.length}</span>
+                    {showSubtasks ? <ChevronUp size={14} className="text-slate-400"/> : <ChevronDown size={14} className="text-slate-400"/>}
+                </div>
+            )}
+            
+            {/* SUBTASK LIST */}
+            <AnimatePresence>
+                {showSubtasks && (
+                    <motion.div initial={{height: 0, opacity:0}} animate={{height: "auto", opacity:1}} exit={{height: 0, opacity:0}} className="overflow-hidden">
+                        <div className="pt-3 space-y-2">
+                            {subtasks.map(sub => (
+                                <div key={sub.id} className="flex items-center gap-2 group/sub">
+                                    <button onClick={() => toggleSubtask(sub.id)} className={cn("w-4 h-4 border rounded flex items-center justify-center transition-colors", sub.isCompleted ? "bg-indigo-500 border-indigo-500 text-white" : "border-slate-300 bg-white")}>
+                                        {sub.isCompleted && <Check size={10} />}
+                                    </button>
+                                    <span className={cn("text-sm flex-1", sub.isCompleted ? "text-slate-400 line-through" : "text-slate-700")}>{sub.content}</span>
+                                    <button onClick={() => deleteSubtask(sub.id)} className="opacity-0 group-hover/sub:opacity-100 text-slate-300 hover:text-rose-500"><X size={14}/></button>
+                                </div>
+                            ))}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ADD SUBTASK INPUT */}
+            <form onSubmit={addSubtask} className="mt-3 flex items-center gap-2 opacity-50 focus-within:opacity-100 transition-opacity">
+                <Plus size={14} className="text-slate-400" />
+                <input 
+                    className="bg-transparent text-sm placeholder:text-slate-400 focus:outline-none w-full"
+                    placeholder="Add a subtask..." 
+                    value={newSubtask}
+                    onChange={e => setNewSubtask(e.target.value)}
+                />
+            </form>
         </div>
-      </div>
-      <div className="flex gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-        <button onClick={() => setIsEditing(true)} className="p-2 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"><Pencil size={20} /></button>
-        <button onClick={onDelete} className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"><Trash2 size={20} /></button>
+
+        <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button onClick={() => setIsEditing(true)} className="p-2 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"><Pencil size={18} /></button>
+            <button onClick={onDelete} className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg"><Trash2 size={18} /></button>
+        </div>
       </div>
     </motion.div>
   );
@@ -582,8 +612,6 @@ function FocusOverlay({ isOpen, onClose, tasks, mode, onComplete }) {
 
   const selectTask = () => {
     let pool = tasks.filter(t => !t.isCompleted && !t.isSomeday);
-    
-    // Sequence Logic
     const projectMinSteps = {};
     pool.forEach(t => {
       if (t.project && t.step) {
@@ -604,7 +632,6 @@ function FocusOverlay({ isOpen, onClose, tasks, mode, onComplete }) {
 
     if (pool.length === 0) { setActiveTask(null); return; }
     
-    // URGENCY LOGIC FOR FOCUS MODE
     const urgent = pool.filter(t => t.isUrgent || (t.dueDate && new Date(t.dueDate) < new Date()));
     setActiveTask(urgent.length > 0 ? urgent[Math.floor(Math.random() * urgent.length)] : pool[Math.floor(Math.random() * pool.length)]);
   };
@@ -638,7 +665,17 @@ function FocusOverlay({ isOpen, onClose, tasks, mode, onComplete }) {
                {activeTask.isUrgent && <span className="px-3 py-1 bg-rose-100 text-rose-600 rounded-full font-bold text-sm">🔥 Urgent</span>}
                <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full font-bold text-sm uppercase">{activeTask.energy} Energy</span>
             </div>
-            {activeTask.dueDate && <div className="text-slate-500 font-bold uppercase text-xs">Target: {activeTask.dueDate}</div>}
+            {activeTask.subtasks && activeTask.subtasks.length > 0 && (
+                <div className="bg-slate-50 p-4 rounded-xl text-left">
+                    <h4 className="text-xs font-bold text-slate-400 uppercase mb-2">Subtasks</h4>
+                    {activeTask.subtasks.map(s => (
+                        <div key={s.id} className="flex items-center gap-2 mb-1">
+                            <div className={cn("w-3 h-3 rounded border", s.isCompleted ? "bg-emerald-500 border-emerald-500" : "border-slate-300")} />
+                            <span className={cn("text-sm", s.isCompleted ? "line-through text-slate-400" : "text-slate-700")}>{s.content}</span>
+                        </div>
+                    ))}
+                </div>
+            )}
             <div className="pt-8">
               <button onClick={handleDone} className="w-full py-6 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-2xl font-bold shadow-xl shadow-emerald-500/30 transform hover:-translate-y-1 transition-all flex items-center justify-center gap-3"><CheckCircle2 size={32} /> Mark Done</button>
               <button onClick={onClose} className="mt-4 text-slate-400 hover:text-slate-600 font-bold text-sm">Skip for now</button>
