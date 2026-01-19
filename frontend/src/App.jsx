@@ -298,7 +298,6 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
 }
 
 // --- VIEW 2: PROJECTS GALLERY ---
-f// --- VIEW 2: PROJECTS GALLERY ---
 function ProjectsListView({ tasks, onSelectProject }) {
     const projects = useMemo(() => {
         const map = {};
