@@ -91,17 +91,14 @@ export default function App() {
     );
   }
 
-  return <MainLayout user={user} onLogout={() => signOut(auth)} />;
+  return <Dashboard user={user} onLogout={() => signOut(auth)} />;
 }
 
-// --- MAIN LAYOUT WITH SIDEBAR ---
-function MainLayout({ user, onLogout }) {
-  const [activeTab, setActiveTab] = useState("dashboard"); // dashboard, projects, agenda
-  const [selectedProject, setSelectedProject] = useState(null); // specific project view
-  
-  // SHARED STATE
+function Dashboard({ user, onLogout }) {
+  const [activeTab, setActiveTab] = useState("dashboard"); 
   const [tasks, setTasks] = useState([]);
-  
+  const [selectedProject, setSelectedProject] = useState(null);
+
   useEffect(() => { refreshTasks(); }, [user.uid]);
 
   const refreshTasks = () => {
@@ -112,78 +109,62 @@ function MainLayout({ user, onLogout }) {
 
   const goToProject = (projectName) => {
     setSelectedProject(projectName);
-    setActiveTab("dashboard"); 
+    setActiveTab("dashboard");
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
-      {/* SIDEBAR */}
-      <div className="w-20 md:w-64 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 transition-all">
+    <div className="w-full max-w-3xl mx-auto p-6 pb-48">
+      {/* HEADER (Restored Original) */}
+      <div className="flex justify-between items-center mb-6 mt-4">
         <div>
-          <div className="p-6 flex items-center gap-3">
-             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-black">FM</div>
-             <span className="text-indigo-500">ADHD</span> Focus Mate<span className="text-indigo-500">.</span>
-          </div>
-          
-          <nav className="px-2 space-y-1">
-            <SidebarItem icon={Layout} label="Dashboard" active={activeTab === "dashboard" && !selectedProject} onClick={() => { setActiveTab("dashboard"); setSelectedProject(null); }} />
-            <SidebarItem icon={FolderKanban} label="Projects" active={activeTab === "projects"} onClick={() => { setActiveTab("projects"); setSelectedProject(null); }} />
-            <SidebarItem icon={CalendarDays} label="Daily Agenda" active={activeTab === "agenda"} onClick={() => { setActiveTab("agenda"); setSelectedProject(null); }} />
-          </nav>
+          <h1 className="text-2xl font-black text-slate-900"><span className="text-indigo-500">ADHD</span> Focus Mate<span className="text-indigo-500">.</span></h1>
+          <p className="text-slate-500 text-sm">Hello, {user.email}</p>
         </div>
-
-        <div className="p-4 border-t border-slate-100">
-          <div className="flex items-center gap-3 px-2 mb-4">
-             <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-500 text-xs">
-                {user.email[0].toUpperCase()}
-             </div>
-             <div className="hidden md:block overflow-hidden">
-                <p className="text-xs font-bold text-slate-900 truncate">{user.email}</p>
-             </div>
-          </div>
-          <button onClick={onLogout} className="w-full flex items-center gap-3 px-2 py-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
-            <LogOut size={20} />
-            <span className="hidden md:block font-bold text-sm">Logout</span>
-          </button>
-        </div>
+        <button onClick={onLogout} className="p-2 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-all">
+          <LogOut size={20} />
+        </button>
       </div>
 
-      {/* MAIN CONTENT AREA */}
-      <div className="flex-1 overflow-y-auto relative">
-         {activeTab === "dashboard" && (
-            <DashboardView 
-                user={user} 
-                tasks={tasks} 
-                refreshTasks={refreshTasks} 
-                filterProject={selectedProject} 
-                setFilterProject={setSelectedProject}
-            />
-         )}
-         {activeTab === "projects" && (
-            <ProjectsListView 
-                tasks={tasks} 
-                onSelectProject={goToProject}
-            />
-         )}
-         {activeTab === "agenda" && (
-            <AgendaView user={user} />
-         )}
+      {/* --- NEW: NAVIGATION TABS --- */}
+      <div className="flex bg-slate-100 p-1 rounded-xl mb-8">
+        <TabButton active={activeTab === "dashboard"} onClick={() => { setActiveTab("dashboard"); setSelectedProject(null); }} icon={Layout} label="Dashboard" />
+        <TabButton active={activeTab === "projects"} onClick={() => setActiveTab("projects")} icon={FolderKanban} label="Projects" />
+        <TabButton active={activeTab === "agenda"} onClick={() => setActiveTab("agenda")} icon={CalendarDays} label="Agenda" />
       </div>
+
+      {/* --- CONTENT AREA --- */}
+      {activeTab === "dashboard" && (
+         <DashboardView 
+             user={user} 
+             tasks={tasks} 
+             refreshTasks={refreshTasks} 
+             filterProject={selectedProject} 
+             setFilterProject={setSelectedProject}
+         />
+      )}
+      {activeTab === "projects" && (
+         <ProjectsListView 
+             tasks={tasks} 
+             onSelectProject={goToProject}
+         />
+      )}
+      {activeTab === "agenda" && (
+         <AgendaView user={user} />
+      )}
     </div>
   );
 }
 
-function SidebarItem({ icon: Icon, label, active, onClick }) {
+function TabButton({ active, onClick, icon: Icon, label }) {
     return (
         <button 
             onClick={onClick}
             className={cn(
-                "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all text-sm",
-                active ? "bg-indigo-50 text-indigo-600" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-bold text-sm transition-all",
+                active ? "bg-white text-indigo-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
             )}
         >
-            <Icon size={20} />
-            <span className="hidden md:block">{label}</span>
+            <Icon size={16} /> {label}
         </button>
     )
 }
@@ -209,7 +190,6 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
   const handleDelete = (id) => { if(confirm("Delete task?")) axios.delete(`${API_URL}/tasks/${id}`, { headers: { "x-user-id": user.uid } }).then(refreshTasks); };
   const handleUpdate = (task) => { axios.put(`${API_URL}/tasks/${task.id}`, task, { headers: { "x-user-id": user.uid } }).then(refreshTasks); };
 
-  // Sorting Logic (Preserved)
   const visibleTasks = useMemo(() => {
     let pool = tasks.filter((t) => !t.isCompleted && !t.isSomeday);
     if (filterProject) return pool.filter(t => t.project === filterProject).sort((a, b) => (a.step || 999) - (b.step || 999));
@@ -234,49 +214,51 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
   }, [tasks, filterProject]);
 
   return (
-    <div className="max-w-3xl mx-auto p-6 pb-32">
-       {/* HEADER */}
-       <div className="flex items-center gap-4 mb-8 mt-2">
-            {filterProject && (
-                <button onClick={() => setFilterProject(null)} className="p-2 hover:bg-slate-200 rounded-full transition-colors"><ArrowLeft /></button>
-            )}
-            <h1 className="text-2xl font-black text-slate-900">
-                {filterProject ? filterProject : "My Bucket"}
-            </h1>
-       </div>
-
-       {/* PROJECT HEADER */}
+    <div>
        {filterProject && (
-         <div className="bg-indigo-600 rounded-3xl p-8 text-white shadow-lg mb-8 relative overflow-hidden animate-in slide-in-from-top-4">
-            <h1 className="text-3xl font-black mb-4">Workspace</h1>
-            <div className="bg-black/20 h-3 rounded-full overflow-hidden mb-2">
-                <div className="bg-white h-full transition-all duration-1000" style={{ width: `${projectStats.progress}%` }} />
-            </div>
-            <div className="text-indigo-100 text-sm font-bold">{projectStats.progress}% Complete</div>
+         <div className="mb-6 animate-in slide-in-from-right-4">
+             <button onClick={() => setFilterProject(null)} className="flex items-center gap-2 text-slate-400 hover:text-slate-800 font-bold mb-4 text-sm"><ArrowLeft size={16} /> Back to Dashboard</button>
+             <div className="bg-indigo-600 rounded-3xl p-8 text-white shadow-lg relative overflow-hidden">
+                <h1 className="text-3xl font-black mb-4">{filterProject}</h1>
+                <div className="bg-black/20 h-3 rounded-full overflow-hidden mb-2">
+                    <div className="bg-white h-full transition-all duration-1000" style={{ width: `${projectStats.progress}%` }} />
+                </div>
+                <div className="text-indigo-100 text-sm font-bold">{projectStats.progress}% Complete</div>
+             </div>
          </div>
        )}
 
-       {/* ADD FORM */}
+       {!filterProject && (
        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm mb-8">
+            <div className="flex items-center gap-3 mb-4">
+                <div className="bg-indigo-50 p-2 rounded-xl"><Flame className="text-indigo-600 w-5 h-5" /></div>
+                <h2 className="text-xl font-bold text-slate-900">Brain Dump</h2>
+            </div>
             <form onSubmit={(e) => handleAdd(e, false)}>
                 <input 
                     className="w-full text-lg font-medium outline-none placeholder:text-slate-300 mb-4" 
-                    placeholder={filterProject ? `Add step to ${filterProject}...` : "What needs to be done?"}
+                    placeholder="What needs to be done?"
                     value={formData.content}
                     onChange={e => setFormData({...formData, content: e.target.value})}
                 />
                 <div className="flex gap-2">
-                    {!filterProject && (
-                        <input className="bg-slate-50 px-4 py-2 rounded-lg text-sm font-bold w-1/3" placeholder="Project Name" value={formData.project} onChange={e => setFormData({...formData, project: e.target.value})} />
-                    )}
+                    <input className="bg-slate-50 px-4 py-2 rounded-lg text-sm font-bold w-1/3" placeholder="Project Name" value={formData.project} onChange={e => setFormData({...formData, project: e.target.value})} />
                     <input type="date" className="bg-slate-50 px-4 py-2 rounded-lg text-sm font-bold uppercase text-slate-500" value={formData.dueDate} onChange={e => setFormData({...formData, dueDate: e.target.value})} />
-                    <button type="submit" className="ml-auto bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700">Add</button>
-                    {!filterProject && <button type="button" onClick={(e) => handleAdd(e, true)} className="bg-slate-100 text-slate-500 px-4 py-2 rounded-lg font-bold"><Archive size={18}/></button>}
+                    <button type="submit" className="ml-auto bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-indigo-700"><Plus size={18}/></button>
+                    <button type="button" onClick={(e) => handleAdd(e, true)} className="bg-slate-100 text-slate-500 px-4 py-2 rounded-lg font-bold"><Archive size={18}/></button>
                 </div>
             </form>
        </div>
+       )}
 
-       {/* TASKS */}
+       {filterProject && (
+           <form onSubmit={(e) => handleAdd(e, false)} className="mb-6 flex gap-2">
+            <input className="flex-1 p-4 border border-slate-200 rounded-xl outline-none" placeholder={`Add step to ${filterProject}...`} value={formData.content} onChange={e => setFormData({...formData, content: e.target.value})} autoFocus />
+            <input type="number" min="1" className="w-20 p-4 border border-slate-200 rounded-xl outline-none" placeholder="#" value={formData.step} onChange={e => setFormData({...formData, step: e.target.value})} />
+            <button type="submit" className="bg-indigo-600 text-white p-4 rounded-xl font-bold hover:bg-indigo-700"><Plus /></button>
+          </form>
+       )}
+
        <div className="space-y-4">
           <AnimatePresence>
             {visibleTasks.map(task => (
@@ -286,7 +268,6 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
           {visibleTasks.length === 0 && <div className="text-center py-10 text-slate-400 font-bold">No active tasks</div>}
        </div>
 
-       {/* SOMEDAY */}
        {!filterProject && somedayTasks.length > 0 && (
           <div className="mt-12 opacity-60">
              <h3 className="font-bold text-slate-400 mb-4 uppercase text-xs tracking-widest">Someday</h3>
@@ -298,9 +279,17 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
           </div>
        )}
 
-       {/* FOCUS BUTTONS */}
-        <div className="fixed bottom-6 right-6 flex gap-2">
-             <button onClick={() => setFocusMode({isOpen: true, mode: 'ready'})} className="bg-slate-900 text-white px-6 py-3 rounded-full font-bold shadow-xl hover:scale-105 transition-transform flex items-center gap-2"><Zap size={18} /> Focus Mode</button>
+        <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white/95 to-transparent pt-12 pointer-events-none">
+            <div className="max-w-3xl mx-auto flex gap-4 pointer-events-auto">
+            <button onClick={() => setFocusMode({ isOpen: true, mode: "tired" })} className="flex-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 py-4 rounded-2xl flex flex-col items-center gap-1 transition-transform hover:-translate-y-1 shadow-lg shadow-emerald-900/10">
+                <div className="flex items-center gap-2 font-bold text-lg"><Battery className="w-5 h-5" /> I'm Tired</div>
+                <span className="text-xs opacity-75 font-medium">Low Energy Mode</span>
+            </button>
+            <button onClick={() => setFocusMode({ isOpen: true, mode: "ready" })} className="flex-1 bg-slate-900 hover:bg-slate-800 text-white py-4 rounded-2xl flex flex-col items-center gap-1 transition-transform hover:-translate-y-1 shadow-xl shadow-slate-900/20">
+                <div className="flex items-center gap-2 font-bold text-lg"><Zap className="w-5 h-5" /> I'm Ready</div>
+                <span className="text-xs text-slate-400 font-medium">Normal / High Energy</span>
+            </button>
+            </div>
         </div>
         
         <FocusOverlay isOpen={focusMode.isOpen} onClose={() => setFocusMode({...focusMode, isOpen: false})} tasks={tasks} mode={focusMode.mode} onComplete={(t) => handleUpdate({...t, isCompleted: true})} />
@@ -322,11 +311,8 @@ function ProjectsListView({ tasks, onSelectProject }) {
     }, [tasks]);
 
     return (
-        <div className="max-w-5xl mx-auto p-8">
-            <h1 className="text-3xl font-black text-slate-900 mb-8 flex items-center gap-3">
-                <FolderKanban className="text-indigo-600" /> Active Projects
-            </h1>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="pb-32">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {projects.map(p => {
                     const progress = Math.round((p.completed / p.total) * 100);
                     return (
@@ -343,27 +329,25 @@ function ProjectsListView({ tasks, onSelectProject }) {
                     )
                 })}
             </div>
+            {projects.length === 0 && <div className="text-center py-10 text-slate-400">No projects yet.</div>}
         </div>
     )
 }
 
-// --- VIEW 3: AGENDA ---
+// --- VIEW 3: AGENDA (UPDATED WITH DATE) ---
 function AgendaView({ user }) {
     const [items, setItems] = useState([]);
-    const [newItem, setNewItem] = useState({ time: "", content: "" });
-    const [isLoading, setIsLoading] = useState(true);
+    const [newItem, setNewItem] = useState({ time: "", content: "", date: new Date().toISOString().split('T')[0] });
 
     useEffect(() => {
-        axios.get(`${API_URL}/agenda`, { headers: { "x-user-id": user.uid } })
-            .then(res => { setItems(res.data); setIsLoading(false); });
+        axios.get(`${API_URL}/agenda`, { headers: { "x-user-id": user.uid } }).then(res => setItems(res.data));
     }, [user.uid]);
 
     const handleAdd = (e) => {
         e.preventDefault();
         if(!newItem.content) return;
-        const payload = { content: newItem.content, time_slot: newItem.time, isCompleted: false };
-        axios.post(`${API_URL}/agenda`, payload, { headers: { "x-user-id": user.uid } })
-            .then(res => { setItems([...items, res.data]); setNewItem({ time: "", content: "" }); });
+        const payload = { content: newItem.content, time_slot: newItem.time, date: newItem.date, isCompleted: false };
+        axios.post(`${API_URL}/agenda`, payload, { headers: { "x-user-id": user.uid } }).then(res => { setItems([...items, res.data]); setNewItem({ ...newItem, content: "", time: "" }); });
     };
 
     const toggleItem = (item) => {
@@ -377,22 +361,29 @@ function AgendaView({ user }) {
         setItems(items.filter(i => i.id !== id));
     };
 
+    // Simple Sort: Date then Time
+    const sortedItems = [...items].sort((a, b) => {
+        if (a.date !== b.date) return (a.date || "").localeCompare(b.date || "");
+        return (a.time_slot || "").localeCompare(b.time_slot || "");
+    });
+
     return (
-        <div className="max-w-2xl mx-auto p-8">
-            <h1 className="text-3xl font-black text-slate-900 mb-8 flex items-center gap-3">
-                <CalendarDays className="text-indigo-600" /> Daily Agenda
-            </h1>
-            <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm mb-8">
-                <form onSubmit={handleAdd} className="flex gap-4">
-                    <input className="w-24 p-3 bg-slate-50 rounded-xl font-bold text-sm" placeholder="Time" value={newItem.time} onChange={e => setNewItem({...newItem, time: e.target.value})} />
-                    <input className="flex-1 p-3 bg-slate-50 rounded-xl font-bold text-sm" placeholder="Activity" value={newItem.content} onChange={e => setNewItem({...newItem, content: e.target.value})} />
-                    <button type="submit" className="bg-indigo-600 text-white p-3 rounded-xl hover:bg-indigo-700"><Plus /></button>
+        <div className="pb-32">
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mb-6">
+                <form onSubmit={handleAdd} className="flex flex-col md:flex-row gap-2">
+                    <input type="date" className="p-3 bg-slate-50 rounded-lg font-bold text-sm text-slate-500" value={newItem.date} onChange={e => setNewItem({...newItem, date: e.target.value})} />
+                    <input className="w-full md:w-24 p-3 bg-slate-50 rounded-lg font-bold text-sm" placeholder="9:00" value={newItem.time} onChange={e => setNewItem({...newItem, time: e.target.value})} />
+                    <input className="flex-1 p-3 bg-slate-50 rounded-lg font-bold text-sm" placeholder="Meeting / Focus Block" value={newItem.content} onChange={e => setNewItem({...newItem, content: e.target.value})} />
+                    <button type="submit" className="bg-indigo-600 text-white p-3 rounded-lg hover:bg-indigo-700"><Plus size={20}/></button>
                 </form>
             </div>
-            <div className="space-y-4">
-                {items.map(item => (
+            <div className="space-y-3">
+                {sortedItems.map(item => (
                     <div key={item.id} className="flex items-center gap-4 group">
-                        <div className="w-24 text-right text-sm font-bold text-slate-400">{item.time_slot}</div>
+                        <div className="text-right">
+                             <div className="text-xs font-bold text-slate-400">{item.date}</div>
+                             <div className="text-sm font-bold text-slate-600">{item.time_slot}</div>
+                        </div>
                         <div className={cn("flex-1 bg-white p-4 rounded-xl border border-slate-200 flex items-center gap-3 shadow-sm", item.isCompleted && "opacity-50")}>
                             <button onClick={() => toggleItem(item)} className={cn("w-5 h-5 border-2 rounded-full flex items-center justify-center", item.isCompleted ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-300")}>
                                 {item.isCompleted && <Check size={12} />}
@@ -407,7 +398,6 @@ function AgendaView({ user }) {
     )
 }
 
-// --- TASK CARD (With Subtasks & Edit/Delete Preserved) ---
 function TaskCard({ task, onDelete, onUpdate, onProjectClick }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState(task);
@@ -532,7 +522,6 @@ function TaskCard({ task, onDelete, onUpdate, onProjectClick }) {
             </form>
         </div>
 
-        {/* --- THE EDIT/DELETE BUTTONS (PRESERVED) --- */}
         <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button onClick={() => setIsEditing(true)} className="p-2 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"><Pencil size={18} /></button>
             <button onClick={onDelete} className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg"><Trash2 size={18} /></button>
@@ -542,7 +531,6 @@ function TaskCard({ task, onDelete, onUpdate, onProjectClick }) {
   );
 }
 
-// --- FOCUS OVERLAY ---
 function FocusOverlay({ isOpen, onClose, tasks, mode, onComplete }) {
   const [activeTask, setActiveTask] = useState(null);
   useEffect(() => { if (isOpen) selectTask(); }, [isOpen]);

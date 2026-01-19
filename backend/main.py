@@ -14,7 +14,7 @@ MONGO_URI = os.getenv("MONGO_URI")
 client = AsyncIOMotorClient(MONGO_URI)
 db = client.focus_mate_db
 tasks_collection = db.tasks
-agenda_collection = db.agenda  # <--- NEW: Agenda Storage
+agenda_collection = db.agenda
 
 app.add_middleware(
     CORSMiddleware,
@@ -44,6 +44,7 @@ class Task(BaseModel):
 class AgendaItem(BaseModel):
     content: str
     time_slot: str = "" 
+    date: str = ""  # <--- NEW FIELD
     isCompleted: bool = False
 
 class TaskResponse(Task):
@@ -97,12 +98,12 @@ async def delete_task(task_id: str, x_user_id: str = Header(None)):
         raise HTTPException(status_code=404, detail="Task not found")
     return {"message": "Deleted"}
 
-# --- AGENDA (NEW) ---
+# --- AGENDA ---
 @app.get("/agenda", response_model=List[AgendaResponse])
 async def get_agenda(x_user_id: str = Header(None)):
     if not x_user_id: return []
     cursor = agenda_collection.find({"user_id": x_user_id})
-    items = await cursor.to_list(length=100)
+    items = await cursor.to_list(length=200)
     return [fix_id(item) for item in items]
 
 @app.post("/agenda", response_model=AgendaResponse)
