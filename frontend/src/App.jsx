@@ -321,16 +321,7 @@ function ProjectsListView({ tasks, onSelectProject }) {
     return (
         <div className="pb-32">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* NEW PROJECT BUTTON */}
-                <button 
-                    onClick={handleCreate}
-                    className="bg-slate-100 border-2 border-dashed border-slate-300 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 text-slate-400 hover:bg-white hover:border-indigo-400 hover:text-indigo-600 transition-all group min-h-[160px]"
-                >
-                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                        <Plus size={24} />
-                    </div>
-                    <span className="font-bold">Create New Project</span>
-                </button>
+                
 
                 {/* EXISTING PROJECTS */}
                 {projects.map(p => {
@@ -350,6 +341,16 @@ function ProjectsListView({ tasks, onSelectProject }) {
                         </button>
                     )
                 })}
+                {/* NEW PROJECT BUTTON */}
+                <button 
+                    onClick={handleCreate}
+                    className="bg-slate-100 border-2 border-dashed border-slate-300 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 text-slate-400 hover:bg-white hover:border-indigo-400 hover:text-indigo-600 transition-all group min-h-[160px]"
+                >
+                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                        <Plus size={24} />
+                    </div>
+                    <span className="font-bold">Create New Project</span>
+                </button>
             </div>
         </div>
     )
