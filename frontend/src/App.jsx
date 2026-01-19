@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   Battery, BatteryCharging, BatteryFull, BatteryMedium, 
   Inbox, Zap, Plus, X, CheckCircle2, Flame, Loader2, Trash2, Pencil, Save, Calendar, Archive,
-  Clock, LogOut, LayoutGrid, Mail, ArrowLeft, XCircle, ListTodo
+  Clock, LogOut, LayoutGrid, Mail, ArrowLeft, XCircle, ListTodo, Check
 } from "lucide-react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -23,6 +23,8 @@ import {
 } from "firebase/auth";
 
 // --- CONFIGURATION ---
+
+// --- CONFIGURATION ---
 const API_URL = "https://focus-mate-final-v3.onrender.com"; 
 const cn = (...inputs) => twMerge(clsx(inputs));
 
@@ -33,7 +35,8 @@ const firebaseConfig = {
   storageBucket: "focus-mate-cb99f.firebasestorage.app",
   messagingSenderId: "174603807809",
   appId: "1:174603807809:web:52b7ba205b56e277b5eac0"
-};// ------------------------------------------------------------------
+};
+// ------------------------------------------------------------------
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
@@ -173,6 +176,9 @@ function Dashboard({ user, onLogout }) {
   };
 
   const handleComplete = (task) => {
+    // Add visual confetti
+    confetti({ particleCount: 50, spread: 50, origin: { y: 0.6 } });
+    
     axios.put(`${API_URL}/tasks/${task.id}`, { ...task, isCompleted: true }, { headers: { "x-user-id": user.uid } })
       .then(refreshTasks);
   };
@@ -191,10 +197,9 @@ function Dashboard({ user, onLogout }) {
     // Dashboard Sorting (Date Priority > Urgency > Project)
     return pool.sort((a, b) => {
         // 1. Due Date Priority (Overdue/Today first)
-        if (a.dueDate && !b.dueDate) return -1; // Has date goes top
-        if (!a.dueDate && b.dueDate) return 1;  // No date goes bottom
+        if (a.dueDate && !b.dueDate) return -1; 
+        if (!a.dueDate && b.dueDate) return 1;  
         if (a.dueDate && b.dueDate) {
-            // Compare dates
             const dateA = new Date(a.dueDate);
             const dateB = new Date(b.dueDate);
             if (dateA !== dateB) return dateA - dateB;
@@ -241,10 +246,7 @@ function Dashboard({ user, onLogout }) {
       <div className="flex justify-between items-center mb-8 mt-4">
         <div className="text-left">
           {!filterProject ? (
-            <h1 className="text-2xl font-black text-slate-900">
-  <span className="text-indigo-500">ADHD</span> Focus Mate
-  <span className="text-indigo-500">.</span>
-</h1>
+            <h1 className="text-2xl font-black text-slate-900"><span className="text-indigo-500">ADHD</span> Focus Mate<span className="text-indigo-500">.</span></h1>
           ) : (
             <button onClick={() => setFilterProject(null)} className="flex items-center gap-2 text-slate-500 hover:text-slate-800 font-bold transition-colors">
                 <ArrowLeft size={20} /> Back to Dashboard
@@ -421,6 +423,7 @@ function Dashboard({ user, onLogout }) {
                 onDelete={() => handleDelete(task.id)} 
                 onEdit={handleEdit} 
                 onProjectClick={(p) => setFilterProject(p)} 
+                onComplete={handleComplete}
             />
           ))}
         </AnimatePresence>
@@ -442,7 +445,7 @@ function Dashboard({ user, onLogout }) {
            </div>
            <div className="space-y-4">
              {somedayTasks.map((task) => (
-               <TaskCard key={task.id} task={task} onDelete={() => handleDelete(task.id)} onEdit={handleEdit} onProjectClick={(p) => setFilterProject(p)} />
+               <TaskCard key={task.id} task={task} onDelete={() => handleDelete(task.id)} onEdit={handleEdit} onProjectClick={(p) => setFilterProject(p)} onComplete={handleComplete} />
              ))}
            </div>
         </div>
@@ -469,7 +472,7 @@ function Dashboard({ user, onLogout }) {
 
 // --- SUB COMPONENTS ---
 
-function TaskCard({ task, onDelete, onEdit, onProjectClick }) {
+function TaskCard({ task, onDelete, onEdit, onProjectClick, onComplete }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState(task);
 
@@ -524,11 +527,24 @@ function TaskCard({ task, onDelete, onEdit, onProjectClick }) {
 
   return (
     <motion.div layout initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0}} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-start gap-4 group hover:border-indigo-200 transition-all">
-      <div className={cn("mt-1 p-2 rounded-full flex-shrink-0", task.isUrgent ? "bg-rose-50" : "bg-slate-50")}>
-        {task.isUrgent ? <Zap className="w-5 h-5 text-rose-500 fill-rose-500" /> : <div className="w-5 h-5 rounded-full border-2 border-slate-300" />}
-      </div>
+      
+      {/* --- QUICK COMPLETE CHECKBOX --- */}
+      <button 
+        onClick={() => onComplete(task)}
+        className="mt-1 w-6 h-6 rounded-full border-2 border-slate-300 hover:border-emerald-500 hover:bg-emerald-50 text-transparent hover:text-emerald-500 flex items-center justify-center transition-all flex-shrink-0 group/check"
+      >
+        <Check size={14} strokeWidth={3} className="scale-0 group-hover/check:scale-100 transition-transform" />
+      </button>
+
+      {/* Urgency Indicator (If Urgent) */}
+      {task.isUrgent && (
+          <div className="mt-1 -ml-2 p-1 bg-rose-50 rounded-full animate-in zoom-in duration-300">
+             <Zap className="w-4 h-4 text-rose-500 fill-rose-500" />
+          </div>
+      )}
+
       <div className="flex-1 min-w-0">
-        <h3 className="font-bold text-slate-800 text-lg leading-tight mb-2 break-words">{task.content}</h3>
+        <h3 className={cn("font-bold text-slate-800 text-lg leading-tight mb-2 break-words", task.isSomeday && "text-slate-500")}>{task.content}</h3>
         <div className="flex flex-wrap gap-2">
            <div className={cn("inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide", getPillStyle(task.energy))}>
              {getIcon(task.energy)} {task.energy} Energy
