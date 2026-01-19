@@ -298,6 +298,7 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
 }
 
 // --- VIEW 2: PROJECTS GALLERY ---
+f// --- VIEW 2: PROJECTS GALLERY ---
 function ProjectsListView({ tasks, onSelectProject }) {
     const projects = useMemo(() => {
         const map = {};
@@ -310,26 +311,47 @@ function ProjectsListView({ tasks, onSelectProject }) {
         return Object.values(map);
     }, [tasks]);
 
+    const handleCreate = () => {
+        const name = prompt("Enter new project name:");
+        if (name && name.trim()) {
+            // Switch to project view immediately for this new name
+            onSelectProject(name.trim());
+        }
+    };
+
     return (
         <div className="pb-32">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* NEW PROJECT BUTTON */}
+                <button 
+                    onClick={handleCreate}
+                    className="bg-slate-100 border-2 border-dashed border-slate-300 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 text-slate-400 hover:bg-white hover:border-indigo-400 hover:text-indigo-600 transition-all group min-h-[160px]"
+                >
+                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                        <Plus size={24} />
+                    </div>
+                    <span className="font-bold">Create New Project</span>
+                </button>
+
+                {/* EXISTING PROJECTS */}
                 {projects.map(p => {
                     const progress = Math.round((p.completed / p.total) * 100);
                     return (
-                        <button key={p.name} onClick={() => onSelectProject(p.name)} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all text-left group">
-                            <h3 className="font-bold text-xl text-slate-800 mb-2 group-hover:text-indigo-600">{p.name}</h3>
-                            <div className="flex justify-between text-xs font-bold text-slate-400 mb-2">
-                                <span>{progress}% Done</span>
-                                <span>{p.completed}/{p.total} Tasks</span>
+                        <button key={p.name} onClick={() => onSelectProject(p.name)} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all text-left group min-h-[160px] flex flex-col justify-between">
+                            <div>
+                                <h3 className="font-bold text-xl text-slate-800 mb-2 group-hover:text-indigo-600 truncate">{p.name}</h3>
+                                <div className="flex justify-between text-xs font-bold text-slate-400 mb-2">
+                                    <span>{progress}% Done</span>
+                                    <span>{p.completed}/{p.total} Tasks</span>
+                                </div>
                             </div>
-                            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-2 bg-slate-100 rounded-full overflow-hidden mt-4">
                                 <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${progress}%` }} />
                             </div>
                         </button>
                     )
                 })}
             </div>
-            {projects.length === 0 && <div className="text-center py-10 text-slate-400">No projects yet.</div>}
         </div>
     )
 }
