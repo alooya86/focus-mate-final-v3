@@ -63,13 +63,14 @@ export default function App() {
 
   if (loadingAuth) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-indigo-600" /></div>;
 
-    if (!user) {
+//------------------------------------------------------------------------------------------
+  if (!user) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-xl border border-slate-100">
           <div className="text-center mb-8">
             <div className="inline-block bg-indigo-50 p-4 rounded-2xl mb-4"><LayoutGrid className="w-10 h-10 text-indigo-600" /></div>
-            <h1 className="text-3xl font-black text-slate-900 mb-2"><span className="text-indigo-500">ADHD </span>Focus Mate<span className="text-indigo-500">.</span></h1>
+            <h1 className="text-3xl font-black text-slate-900 mb-2"><span className="text-indigo-500">ADHD </span>Focus Mate</h1>
             <p className="text-slate-500">Sign in to organize your brain.</p>
           </div>
           <div className="space-y-3 mb-6">
