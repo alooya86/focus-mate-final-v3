@@ -17,10 +17,6 @@ import {
   signOut, onAuthStateChanged 
 } from "firebase/auth";
 
-// --- CONFIGURATION ---
-const API_URL = "https://focus-mate-final-v3.onrender.com"; 
-const cn = (...inputs) => twMerge(clsx(inputs));
-
 // --- TRANSLATIONS (Simple Internal System) ---
 const translations = {
   en: {
