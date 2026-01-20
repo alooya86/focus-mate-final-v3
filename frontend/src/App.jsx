@@ -267,7 +267,7 @@ function MainLayout({ user, onLogout }) {
 
       {/* SIDEBAR (Collapsible on Mobile, Fixed on Desktop) */}
       <div className={cn(
-          "fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 flex flex-col justify-between transition-transform duration-300 ease-in-out md:relative md:translate-x-0 shadow-2xl md:shadow-none",
+          "fixed inset-y-0 start-0 z-40 w-64 bg-white border-e border-slate-200 flex flex-col justify-between transition-transform duration-300 ease-in-out md:relative md:translate-x-0 shadow-2xl md:shadow-none",
           isSidebarOpen ? "translate-x-0" : "-translate-x-full rtl:translate-x-full rtl:md:translate-x-0"
       )}>
         <div>
