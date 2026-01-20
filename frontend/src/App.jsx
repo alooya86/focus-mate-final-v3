@@ -450,7 +450,8 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
   }, [tasks, filterProject]);
 
   return (
-    <div>
+    // ADDED pb-40 HERE TO FIX SCROLLING
+    <div className="pb-40">
        {filterProject && (
          <div className="mb-6 animate-in slide-in-from-right-4">
              <button onClick={() => setFilterProject(null)} className="flex items-center gap-2 text-slate-400 hover:text-slate-800 font-bold mb-4 text-sm"><ArrowLeft size={16} /> Back</button>
@@ -517,7 +518,6 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
                                 </button>
                             )}
                         </div>
-                         {/* ADD TO AGENDA SWITCH */}
                          {formData.dueDate && (
                              <div className="mt-2 flex items-center gap-2 px-1 animate-in fade-in slide-in-from-top-1">
                                 <input type="checkbox" id="agendaToggle" checked={formData.addToAgenda} onChange={e => setFormData({...formData, addToAgenda: e.target.checked})} className="accent-indigo-600 w-4 h-4" />
@@ -591,14 +591,15 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
           </div>
        )}
 
-         <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white/95 to-transparent pt-12 pointer-events-none">
+         {/* FIXED FOOTER WITH CORRECT POSITIONING */}
+         <div className="fixed bottom-0 left-0 right-0 md:left-64 z-20 p-6 bg-gradient-to-t from-white via-white/95 to-transparent pt-12 pointer-events-none">
             <div className="max-w-3xl mx-auto flex gap-4 pointer-events-auto">
             <button onClick={() => setFocusMode({ isOpen: true, mode: "tired" })} className="flex-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 py-4 rounded-2xl flex flex-col items-center gap-1 transition-transform hover:-translate-y-1 shadow-lg shadow-emerald-900/10">
-                <div className="flex items-center gap-2 font-bold text-lg"><Battery className="w-5 h-5" /> I'm Tired</div>
+                <div className="flex items-center gap-2 font-bold text-lg"><Battery className="w-5 h-5" /> {t('imTired')}</div>
                 <span className="text-xs opacity-75 font-medium">Low Energy Mode</span>
             </button>
             <button onClick={() => setFocusMode({ isOpen: true, mode: "ready" })} className="flex-1 bg-slate-900 hover:bg-slate-800 text-white py-4 rounded-2xl flex flex-col items-center gap-1 transition-transform hover:-translate-y-1 shadow-xl shadow-slate-900/20">
-                <div className="flex items-center gap-2 font-bold text-lg"><Zap className="w-5 h-5" /> I'm Ready</div>
+                <div className="flex items-center gap-2 font-bold text-lg"><Zap className="w-5 h-5" /> {t('imReady')}</div>
                 <span className="text-xs text-slate-400 font-medium">Normal / High Energy</span>
             </button>
             </div>
