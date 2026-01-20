@@ -114,9 +114,9 @@ i18n
       },
       ar: {
         translation: {
-          dashboard: "لوحة القيادة",
+          dashboard: "لوحة التحكم",
           projects: "المشاريع",
-          agenda: "جدول الأعمال",
+          agenda: "الأجندة",
           brainDump: "تفريغ الذهن",
           whatToDo: "ما الذي يجب القيام به؟",
           projName: "اسم المشروع (اختياري)",
@@ -126,7 +126,7 @@ i18n
           urgent: "عاجل؟",
           energy: "الطاقة المطلوبة",
           addBucket: "إضافة إلى القائمة",
-          moveSomeday: "نقل إلى يوم ما",
+          moveSomeday: "قد أفعله في يوم ما",
           addToAgenda: "إضافة إلى الجدول؟",
           today: "اليوم",
           upcoming: "القادمة / السابقة",
@@ -660,9 +660,9 @@ function ProjectsListView({ tasks, onSelectProject }) {
     )
 }
 
-// --- AGENDA VIEW (With Day Names + Editing) ---
+// --- AGENDA VIEW (AM/PM Format + Date/Time Sort) ---
 function AgendaView({ user }) {
-    const { t, i18n } = useTranslation(); // Need i18n for date formatting
+    const { t, i18n } = useTranslation(); 
     const [items, setItems] = useState([]);
     const [newItem, setNewItem] = useState({ time: "", content: "", date: new Date().toISOString().split('T')[0] });
     
@@ -707,15 +707,36 @@ function AgendaView({ user }) {
         setEditingId(null);
     };
 
-    // Helper to get localized weekday (e.g., "Mon", "Lundi", "الاثنين")
+    // Helper: Get Day Name
     const getDayName = (dateStr) => {
         const date = new Date(dateStr);
         return date.toLocaleDateString(i18n.language, { weekday: 'short' });
     };
 
+    // Helper: Convert 24h (14:30) to AM/PM (2:30 PM)
+    const formatToAmPm = (timeStr) => {
+        if (!timeStr) return "";
+        // Check if it's already not in HH:mm format (legacy data)
+        if (!timeStr.includes(":")) return timeStr;
+        
+        const [hours, minutes] = timeStr.split(':');
+        const h = parseInt(hours, 10);
+        const suffix = h >= 12 ? 'PM' : 'AM';
+        const hour12 = h % 12 || 12;
+        return `${hour12}:${minutes} ${suffix}`;
+    };
+
     const todayStr = new Date().toISOString().split('T')[0];
+
+    // SORTING: Today items by time
     const todayItems = items.filter(i => i.date === todayStr).sort((a,b) => (a.time_slot||"").localeCompare(b.time_slot||""));
-    const otherItems = items.filter(i => i.date !== todayStr).sort((a,b) => (a.date||"").localeCompare(b.date||""));
+    
+    // SORTING: Other items by Date THEN Time
+    const otherItems = items.filter(i => i.date !== todayStr).sort((a,b) => {
+        const dateComparison = (a.date || "").localeCompare(b.date || "");
+        if (dateComparison !== 0) return dateComparison;
+        return (a.time_slot || "").localeCompare(b.time_slot || "");
+    });
 
     const AgendaList = ({ list }) => (
         <div className="space-y-3">
@@ -724,25 +745,25 @@ function AgendaView({ user }) {
                     {/* Left Column: Day, Date, Time */}
                     <div className="text-right w-24 shrink-0 flex flex-col items-end">
                         {editingId === item.id ? (
+                            // Edit Time Input (Now type="time" for easy picking)
                             <input 
-                                className="w-full text-right text-xs font-bold p-1 border rounded" 
+                                type="time"
+                                className="w-full text-right text-xs font-bold p-1 border rounded bg-white" 
                                 value={editForm.time} 
                                 onChange={e => setEditForm({...editForm, time: e.target.value})}
                             />
                         ) : (
                             <>
-                                {/* Day Name (e.g. MON) */}
                                 <div className="text-xs font-black text-indigo-500 uppercase tracking-wider">
                                     {item.date === todayStr ? t('today') : getDayName(item.date)}
                                 </div>
-                                
-                                {/* Date (e.g. 2024-01-20) - Only if not today */}
                                 {item.date !== todayStr && (
                                     <div className="text-[10px] font-bold text-slate-400">{item.date}</div>
                                 )}
-
-                                {/* Time Slot */}
-                                <div className="text-xs font-bold text-slate-600">{item.time_slot}</div>
+                                {/* Display Formatted Time */}
+                                <div className="text-xs font-bold text-slate-600">
+                                    {formatToAmPm(item.time_slot)}
+                                </div>
                             </>
                         )}
                     </div>
@@ -783,9 +804,30 @@ function AgendaView({ user }) {
         <div className="pb-32">
             <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mb-8">
                 <form onSubmit={handleAdd} className="flex flex-col md:flex-row gap-2">
-                    <input type="date" className="p-3 bg-slate-50 rounded-lg font-bold text-sm text-slate-500" value={newItem.date} onChange={e => setNewItem({...newItem, date: e.target.value})} />
-                    <input className="w-full md:w-24 p-3 bg-slate-50 rounded-lg font-bold text-sm" placeholder="9:00" value={newItem.time} onChange={e => setNewItem({...newItem, time: e.target.value})} />
-                    <input className="flex-1 p-3 bg-slate-50 rounded-lg font-bold text-sm" placeholder="Meeting / Focus Block" value={newItem.content} onChange={e => setNewItem({...newItem, content: e.target.value})} />
+                    {/* Date Input */}
+                    <input 
+                        type="date" 
+                        className="p-3 bg-slate-50 rounded-lg font-bold text-sm text-slate-500" 
+                        value={newItem.date} 
+                        onChange={e => setNewItem({...newItem, date: e.target.value})} 
+                    />
+                    
+                    {/* Time Input (Changed to type="time") */}
+                    <input 
+                        type="time"
+                        className="w-full md:w-32 p-3 bg-slate-50 rounded-lg font-bold text-sm" 
+                        value={newItem.time} 
+                        onChange={e => setNewItem({...newItem, time: e.target.value})} 
+                    />
+                    
+                    {/* Content Input */}
+                    <input 
+                        className="flex-1 p-3 bg-slate-50 rounded-lg font-bold text-sm" 
+                        placeholder="Meeting / Focus Block" 
+                        value={newItem.content} 
+                        onChange={e => setNewItem({...newItem, content: e.target.value})} 
+                    />
+                    
                     <button type="submit" className="bg-indigo-600 text-white p-3 rounded-lg hover:bg-indigo-700"><Plus size={20}/></button>
                 </form>
             </div>
