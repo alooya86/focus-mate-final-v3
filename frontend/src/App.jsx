@@ -273,10 +273,18 @@ function MainLayout({ user, onLogout }) {
         <div>
           <div className="p-6 flex items-center justify-between">
              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-black">FM</div>
-                <span className="font-black text-slate-800 text-lg">Focus Mate</span>
-                <p className="text-slate-500 text-sm">Hello, {user.email}</p>
+                {/* Logo */}
+                <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-black shrink-0">FM</div>
+                
+                {/* Text Column */}
+                <div className="flex flex-col">
+                    <span className="font-black text-slate-800 text-lg leading-tight">Focus Mate</span>
+                    <span className="text-xs font-bold text-slate-400">
+                        {t('welcome')}, {user.displayName || user.email.split('@')[0]}
+                    </span>
+                </div>
              </div>
+
              {/* Close Button (Mobile Only) */}
              <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-400 hover:text-slate-600">
                <X size={20} />
