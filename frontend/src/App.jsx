@@ -255,7 +255,7 @@ function MainLayout({ user, onLogout }) {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
+    <div className="flex h-[100dvh] w-full bg-slate-50 overflow-hidden font-sans">
       
       {/* MOBILE OVERLAY (Click outside to close) */}
       {isSidebarOpen && (
@@ -338,7 +338,7 @@ function MainLayout({ user, onLogout }) {
       </div>
 
       {/* CONTENT AREA */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden relative bg-slate-50">
+      <div className="flex-1 flex flex-col h-full min-w-0 bg-slate-50 relative">
          
          {/* MOBILE HEADER (HAMBURGER BUTTON) */}
          <div className="md:hidden p-4 bg-white border-b border-slate-200 flex items-center gap-3 shrink-0">
@@ -348,7 +348,7 @@ function MainLayout({ user, onLogout }) {
             <span className="font-black text-slate-800 text-lg">Focus Mate</span>
          </div>
 
-         <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-32">
+         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 pb-48">
             <div className="max-w-4xl mx-auto">
                 {activeTab === "dashboard" && (
                     <DashboardView 
