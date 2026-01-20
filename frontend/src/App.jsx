@@ -591,13 +591,17 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
           </div>
        )}
 
-        <div className="fixed bottom-6 right-6 flex gap-3 z-50">
-            <button onClick={() => setFocusMode({ isOpen: true, mode: "tired" })} className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-6 py-3 rounded-full font-bold shadow-lg flex items-center gap-2 transition-transform hover:-translate-y-1">
-                <Battery size={20} /> {t('imTired')}
+         <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white/95 to-transparent pt-12 pointer-events-none">
+            <div className="max-w-3xl mx-auto flex gap-4 pointer-events-auto">
+            <button onClick={() => setFocusMode({ isOpen: true, mode: "tired" })} className="flex-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 py-4 rounded-2xl flex flex-col items-center gap-1 transition-transform hover:-translate-y-1 shadow-lg shadow-emerald-900/10">
+                <div className="flex items-center gap-2 font-bold text-lg"><Battery className="w-5 h-5" /> I'm Tired</div>
+                <span className="text-xs opacity-75 font-medium">Low Energy Mode</span>
             </button>
-            <button onClick={() => setFocusMode({ isOpen: true, mode: "ready" })} className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-full font-bold shadow-xl flex items-center gap-2 transition-transform hover:-translate-y-1">
-                <Zap size={20} /> {t('imReady')}
+            <button onClick={() => setFocusMode({ isOpen: true, mode: "ready" })} className="flex-1 bg-slate-900 hover:bg-slate-800 text-white py-4 rounded-2xl flex flex-col items-center gap-1 transition-transform hover:-translate-y-1 shadow-xl shadow-slate-900/20">
+                <div className="flex items-center gap-2 font-bold text-lg"><Zap className="w-5 h-5" /> I'm Ready</div>
+                <span className="text-xs text-slate-400 font-medium">Normal / High Energy</span>
             </button>
+            </div>
         </div>
         
         <FocusOverlay isOpen={focusMode.isOpen} onClose={() => setFocusMode({...focusMode, isOpen: false})} tasks={tasks} mode={focusMode.mode} onComplete={(t) => handleUpdate({...t, isCompleted: true})} />
