@@ -91,9 +91,6 @@ i18n
     interpolation: { escapeValue: false }
   });
 
-const API_URL = "https://focus-mate-final-v3.onrender.com"; 
-const cn = (...inputs) => twMerge(clsx(inputs));
-
 const firebaseConfig = {
   apiKey: "AIzaSyDuPEPhMgblorhwHjPMV47TTJWWxOefPdU",
   authDomain: "focus-mate-cb99f.firebaseapp.com",
