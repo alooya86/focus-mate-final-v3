@@ -6,7 +6,7 @@ import {
   Battery, BatteryFull, BatteryMedium, 
   Zap, Plus, X, CheckCircle2, Flame, Loader2, Trash2, Pencil, Save, Calendar, Archive,
   Clock, LogOut, LayoutGrid, Mail, ArrowLeft, XCircle, Check, ChevronDown, ChevronUp,
-  Layout, FolderKanban, CalendarDays, Globe
+  Layout, FolderKanban, CalendarDays, Globe, Menu
 } from "lucide-react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -227,9 +227,11 @@ export default function App() {
 }
 
 // --- MAIN LAYOUT (SIDEBAR + CONTENT) ---
+// --- MAIN LAYOUT (RESPONSIVE SIDEBAR + CONTENT) ---
 function MainLayout({ user, onLogout }) {
   const [activeTab, setActiveTab] = useState("dashboard"); 
   const [selectedProject, setSelectedProject] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // NEW: Sidebar State
   const { t, i18n } = useTranslation();
   const [tasks, setTasks] = useState([]);
   
@@ -249,22 +251,41 @@ function MainLayout({ user, onLogout }) {
   const goToProject = (projectName) => {
     setSelectedProject(projectName);
     setActiveTab("dashboard"); 
+    setIsSidebarOpen(false); // Close sidebar on mobile when navigating
   };
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
-      {/* SIDEBAR */}
-      <div className="w-64 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 transition-all z-20 shadow-xl md:shadow-none">
+      
+      {/* MOBILE OVERLAY (Click outside to close) */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      {/* SIDEBAR (Collapsible on Mobile, Fixed on Desktop) */}
+      <div className={cn(
+          "fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 flex flex-col justify-between transition-transform duration-300 ease-in-out md:relative md:translate-x-0 shadow-2xl md:shadow-none",
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full rtl:translate-x-full rtl:md:translate-x-0"
+      )}>
         <div>
-          <div className="p-6 flex items-center gap-3">
-             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-black">FM</div>
-             <span className="font-black text-slate-800 text-lg">Focus Mate</span>
+          <div className="p-6 flex items-center justify-between">
+             <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-black">FM</div>
+                <span className="font-black text-slate-800 text-lg">Focus Mate</span>
+             </div>
+             {/* Close Button (Mobile Only) */}
+             <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-400 hover:text-slate-600">
+               <X size={20} />
+             </button>
           </div>
           
           <nav className="px-3 space-y-1 mt-2">
-            <SidebarItem icon={Layout} label={t('dashboard')} active={activeTab === "dashboard" && !selectedProject} onClick={() => { setActiveTab("dashboard"); setSelectedProject(null); }} />
-            <SidebarItem icon={FolderKanban} label={t('projects')} active={activeTab === "projects"} onClick={() => { setActiveTab("projects"); setSelectedProject(null); }} />
-            <SidebarItem icon={CalendarDays} label={t('agenda')} active={activeTab === "agenda"} onClick={() => { setActiveTab("agenda"); setSelectedProject(null); }} />
+            <SidebarItem icon={Layout} label={t('dashboard')} active={activeTab === "dashboard" && !selectedProject} onClick={() => { setActiveTab("dashboard"); setSelectedProject(null); setIsSidebarOpen(false); }} />
+            <SidebarItem icon={FolderKanban} label={t('projects')} active={activeTab === "projects"} onClick={() => { setActiveTab("projects"); setSelectedProject(null); setIsSidebarOpen(false); }} />
+            <SidebarItem icon={CalendarDays} label={t('agenda')} active={activeTab === "agenda"} onClick={() => { setActiveTab("agenda"); setSelectedProject(null); setIsSidebarOpen(false); }} />
           </nav>
 
           {/* LANGUAGE SWITCHER (DROPDOWN) */}
@@ -308,26 +329,37 @@ function MainLayout({ user, onLogout }) {
       </div>
 
       {/* CONTENT AREA */}
-      <div className="flex-1 overflow-y-auto relative bg-slate-50">
-         <div className="max-w-4xl mx-auto p-6 pb-32">
-            {activeTab === "dashboard" && (
-                <DashboardView 
-                    user={user} 
-                    tasks={tasks} 
-                    refreshTasks={refreshTasks} 
-                    filterProject={selectedProject} 
-                    setFilterProject={setSelectedProject}
-                />
-            )}
-            {activeTab === "projects" && (
-                <ProjectsListView 
-                    tasks={tasks} 
-                    onSelectProject={goToProject}
-                />
-            )}
-            {activeTab === "agenda" && (
-                <AgendaView user={user} />
-            )}
+      <div className="flex-1 flex flex-col h-full overflow-hidden relative bg-slate-50">
+         
+         {/* MOBILE HEADER (HAMBURGER BUTTON) */}
+         <div className="md:hidden p-4 bg-white border-b border-slate-200 flex items-center gap-3 shrink-0">
+            <button onClick={() => setIsSidebarOpen(true)} className="p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+                <Menu size={24} />
+            </button>
+            <span className="font-black text-slate-800 text-lg">Focus Mate</span>
+         </div>
+
+         <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-32">
+            <div className="max-w-4xl mx-auto">
+                {activeTab === "dashboard" && (
+                    <DashboardView 
+                        user={user} 
+                        tasks={tasks} 
+                        refreshTasks={refreshTasks} 
+                        filterProject={selectedProject} 
+                        setFilterProject={setSelectedProject}
+                    />
+                )}
+                {activeTab === "projects" && (
+                    <ProjectsListView 
+                        tasks={tasks} 
+                        onSelectProject={goToProject}
+                    />
+                )}
+                {activeTab === "agenda" && (
+                    <AgendaView user={user} />
+                )}
+            </div>
          </div>
       </div>
     </div>
