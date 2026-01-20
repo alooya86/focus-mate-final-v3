@@ -274,7 +274,7 @@ function MainLayout({ user, onLogout }) {
           <div className="p-6 flex items-center justify-between">
              <div className="flex items-center gap-3">
                 <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-black">FM</div>
-                <span className="text-indigo-500">ADHD</span> Focus Mate<span className="text-indigo-500">.</span>
+                <span className="font-black text-slate-800 text-lg">Focus Mate</span>
                 <p className="text-slate-500 text-sm">Hello, {user.email}</p>
              </div>
              {/* Close Button (Mobile Only) */}
