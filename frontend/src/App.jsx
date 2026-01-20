@@ -6,7 +6,7 @@ import {
   Battery, BatteryFull, BatteryMedium, 
   Inbox, Zap, Plus, X, CheckCircle2, Flame, Loader2, Trash2, Pencil, Save, Calendar, Archive,
   Clock, LogOut, LayoutGrid, Mail, ArrowLeft, XCircle, ListTodo, Check, ChevronDown, ChevronUp,
-  Layout, FolderKanban, CalendarDays
+  Layout, FolderKanban, CalendarDays, Globe, User, Languages
 } from "lucide-react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -21,6 +21,64 @@ import {
 const API_URL = "https://focus-mate-final-v3.onrender.com"; 
 const cn = (...inputs) => twMerge(clsx(inputs));
 
+// --- TRANSLATIONS (Simple Internal System) ---
+const translations = {
+  en: {
+    dashboard: "Dashboard",
+    projects: "Projects",
+    agenda: "Agenda",
+    brainDump: "Brain Dump",
+    whatToDo: "What needs to be done?",
+    projName: "Project Name (Optional)",
+    step: "Step #",
+    targetDate: "Target Date",
+    priority: "Priority Level",
+    urgent: "Urgent?",
+    energy: "Energy Required",
+    addBucket: "Add to Bucket",
+    moveSomeday: "Move to Someday",
+    addToAgenda: "Add to Agenda also?",
+    today: "Today",
+    upcoming: "Upcoming / Past",
+    logout: "Logout",
+    welcome: "Hello",
+    low: "LOW", med: "MED", high: "HIGH",
+    focusMode: "Focus Mode",
+    imTired: "I'm Tired",
+    imReady: "I'm Ready",
+    createProject: "Create New Project"
+  },
+  es: {
+    dashboard: "Tablero",
+    projects: "Proyectos",
+    agenda: "Agenda",
+    brainDump: "Vaciado Mental",
+    whatToDo: "¿Qué necesitas hacer?",
+    projName: "Nombre del Proyecto (Opcional)",
+    step: "Paso #",
+    targetDate: "Fecha Objetivo",
+    priority: "Nivel de Prioridad",
+    urgent: "¿Urgente?",
+    energy: "Energía Requerida",
+    addBucket: "Añadir a la Cubeta",
+    moveSomeday: "Mover a Algún Día",
+    addToAgenda: "¿Añadir a la Agenda?",
+    today: "Hoy",
+    upcoming: "Próximos / Pasados",
+    logout: "Cerrar Sesión",
+    welcome: "Hola",
+    low: "BAJA", med: "MEDIA", high: "ALTA",
+    focusMode: "Modo Enfoque",
+    imTired: "Estoy Cansado",
+    imReady: "Estoy Listo",
+    createProject: "Crear Proyecto"
+  }
+};
+
+// ------------------------------------------------------------------
+const API_URL = "https://focus-mate-final-v3.onrender.com"; 
+const cn = (...inputs) => twMerge(clsx(inputs));
+
 const firebaseConfig = {
   apiKey: "AIzaSyDuPEPhMgblorhwHjPMV47TTJWWxOefPdU",
   authDomain: "focus-mate-cb99f.firebaseapp.com",
@@ -28,7 +86,7 @@ const firebaseConfig = {
   storageBucket: "focus-mate-cb99f.firebasestorage.app",
   messagingSenderId: "174603807809",
   appId: "1:174603807809:web:52b7ba205b56e277b5eac0"
-};
+
 // ------------------------------------------------------------------
 
 const app = initializeApp(firebaseConfig);
@@ -63,37 +121,36 @@ export default function App() {
 
   if (loadingAuth) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-indigo-600" /></div>;
 
+  // --- LOGIN PAGE (UNCHANGED LAYOUT) ---
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-xl border border-slate-100">
           <div className="text-center mb-8">
             <div className="inline-block bg-indigo-50 p-4 rounded-2xl mb-4"><LayoutGrid className="w-10 h-10 text-indigo-600" /></div>
-            <h1 className="text-3xl font-black text-slate-900 mb-2"><span className="text-indigo-500">ADHD </span>Focus Mate<span className="text-indigo-500">.</span></h1>
+            <h1 className="text-3xl font-black text-slate-900 mb-2"><span className="text-indigo-500">ADHD </span>Focus Mate</h1>
             <p className="text-slate-500">Sign in to organize your brain.</p>
           </div>
-          
           <div className="space-y-3 mb-6">
             <button onClick={(e) => handleAuth(e, 'google')} className="w-full bg-white border border-slate-200 text-slate-700 font-bold py-3 rounded-xl hover:bg-slate-50 transition-all flex items-center justify-center gap-3">
               <svg className="w-5 h-5" viewBox="0 0 24 24"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" /><path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" /><path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" /><path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" /></svg>
               Continue with Google
             </button>
           </div>
-
           <div className="relative mb-6">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200"></div></div>
-            <div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-slate-500">Or use email</span></div>
+             <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200"></div></div>
+             <div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-slate-500">Or use email</span></div>
           </div>
-
           <form onSubmit={(e) => handleAuth(e, 'email')} className="space-y-4">
             {authError && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg">{authError}</div>}
             <div className="space-y-3">
               <input type="email" placeholder="Email address" className="w-full p-4 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20" value={email} onChange={e => setEmail(e.target.value)} required />
               <input type="password" placeholder="Password" className="w-full p-4 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20" value={password} onChange={e => setPassword(e.target.value)} required />
             </div>
-            <button type="submit" className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"><Mail className="w-5 h-5" />{isSignUp ? "Create Account" : "Sign In"}</button>
+            <button type="submit" className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl hover:bg-indigo-700 transition-all flex items-center justify-center gap-2">
+               {isSignUp ? "Create Account" : "Sign In"}
+            </button>
           </form>
-
           <div className="mt-6 text-center">
             <button onClick={() => setIsSignUp(!isSignUp)} className="text-slate-500 hover:text-indigo-600 text-sm font-medium transition-colors">{isSignUp ? "Already have an account? Sign In" : "Don't have an account? Create one"}</button>
           </div>
@@ -102,14 +159,18 @@ export default function App() {
     );
   }
 
-  return <Dashboard user={user} onLogout={() => signOut(auth)} />;
+  return <MainLayout user={user} onLogout={() => signOut(auth)} />;
 }
 
-function Dashboard({ user, onLogout }) {
+// --- NEW SPLIT-SCREEN LAYOUT ---
+function MainLayout({ user, onLogout }) {
   const [activeTab, setActiveTab] = useState("dashboard"); 
-  const [tasks, setTasks] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
-
+  const [lang, setLang] = useState("en"); // Language State
+  const t = translations[lang]; // Current Translation
+  
+  const [tasks, setTasks] = useState([]);
+  
   useEffect(() => { refreshTasks(); }, [user.uid]);
 
   const refreshTasks = () => {
@@ -120,94 +181,130 @@ function Dashboard({ user, onLogout }) {
 
   const goToProject = (projectName) => {
     setSelectedProject(projectName);
-    setActiveTab("dashboard");
+    setActiveTab("dashboard"); 
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto p-6 pb-48">
-      {/* HEADER */}
-      <div className="flex justify-between items-center mb-6 mt-4">
+    <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
+      {/* 1. SIDEBAR (Previously Discussed Layout) */}
+      <div className="w-64 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 transition-all z-20 shadow-xl md:shadow-none">
         <div>
-          <h1 className="text-2xl font-black text-slate-900"><span className="text-indigo-500">ADHD</span> Focus Mate<span className="text-indigo-500">.</span></h1>
-          <p className="text-slate-500 text-sm">Hello, {user.email}</p>
+          <div className="p-6 flex items-center gap-3">
+             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-black">FM</div>
+             <span className="font-black text-slate-800 text-lg">Focus Mate</span>
+          </div>
+          
+          <nav className="px-3 space-y-1 mt-2">
+            <SidebarItem icon={Layout} label={t.dashboard} active={activeTab === "dashboard" && !selectedProject} onClick={() => { setActiveTab("dashboard"); setSelectedProject(null); }} />
+            <SidebarItem icon={FolderKanban} label={t.projects} active={activeTab === "projects"} onClick={() => { setActiveTab("projects"); setSelectedProject(null); }} />
+            <SidebarItem icon={CalendarDays} label={t.agenda} active={activeTab === "agenda"} onClick={() => { setActiveTab("agenda"); setSelectedProject(null); }} />
+          </nav>
+
+          {/* LANGUAGE SWITCHER */}
+          <div className="px-6 mt-8">
+            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2"><Globe size={12}/> Language</div>
+            <div className="flex bg-slate-100 p-1 rounded-lg">
+                <button onClick={() => setLang("en")} className={cn("flex-1 py-1 rounded-md text-xs font-bold transition-all", lang === 'en' ? "bg-white text-indigo-600 shadow-sm" : "text-slate-400")}>EN</button>
+                <button onClick={() => setLang("es")} className={cn("flex-1 py-1 rounded-md text-xs font-bold transition-all", lang === 'es' ? "bg-white text-indigo-600 shadow-sm" : "text-slate-400")}>ES</button>
+            </div>
+          </div>
         </div>
-        <button onClick={onLogout} className="p-2 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-all">
-          <LogOut size={20} />
-        </button>
+
+        <div className="p-4 border-t border-slate-100 bg-slate-50/50">
+          <div className="flex items-center gap-3 px-2 mb-4">
+             <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center font-bold text-indigo-600 text-xs">
+                {user.email[0].toUpperCase()}
+             </div>
+             <div className="overflow-hidden">
+                <p className="text-xs text-slate-500 font-medium">{t.welcome}</p>
+                <p className="text-xs font-bold text-slate-900 truncate w-32">{user.email}</p>
+             </div>
+          </div>
+          <button onClick={onLogout} className="w-full flex items-center gap-3 px-2 py-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
+            <LogOut size={18} />
+            <span className="font-bold text-sm">{t.logout}</span>
+          </button>
+        </div>
       </div>
 
-      {/* NAVIGATION TABS */}
-      <div className="flex bg-slate-100 p-1 rounded-xl mb-8">
-        <TabButton active={activeTab === "dashboard"} onClick={() => { setActiveTab("dashboard"); setSelectedProject(null); }} icon={Layout} label="Dashboard" />
-        <TabButton active={activeTab === "projects"} onClick={() => setActiveTab("projects")} icon={FolderKanban} label="Projects" />
-        <TabButton active={activeTab === "agenda"} onClick={() => setActiveTab("agenda")} icon={CalendarDays} label="Agenda" />
+      {/* 2. MAIN CONTENT AREA */}
+      <div className="flex-1 overflow-y-auto relative bg-slate-50">
+         <div className="max-w-4xl mx-auto p-6 pb-32">
+            {activeTab === "dashboard" && (
+                <DashboardView 
+                    user={user} 
+                    tasks={tasks} 
+                    refreshTasks={refreshTasks} 
+                    filterProject={selectedProject} 
+                    setFilterProject={setSelectedProject}
+                    t={t}
+                />
+            )}
+            {activeTab === "projects" && (
+                <ProjectsListView 
+                    tasks={tasks} 
+                    onSelectProject={goToProject}
+                    t={t}
+                />
+            )}
+            {activeTab === "agenda" && (
+                <AgendaView user={user} t={t} />
+            )}
+         </div>
       </div>
-
-      {/* CONTENT AREA */}
-      {activeTab === "dashboard" && (
-         <DashboardView 
-             user={user} 
-             tasks={tasks} 
-             refreshTasks={refreshTasks} 
-             filterProject={selectedProject} 
-             setFilterProject={setSelectedProject}
-         />
-      )}
-      {activeTab === "projects" && (
-         <ProjectsListView 
-             tasks={tasks} 
-             onSelectProject={goToProject}
-         />
-      )}
-      {activeTab === "agenda" && (
-         <AgendaView user={user} />
-      )}
     </div>
   );
 }
 
-function TabButton({ active, onClick, icon: Icon, label }) {
+function SidebarItem({ icon: Icon, label, active, onClick }) {
     return (
         <button 
             onClick={onClick}
             className={cn(
-                "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-bold text-sm transition-all",
-                active ? "bg-white text-indigo-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all text-sm relative group",
+                active ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:bg-white/50 hover:text-slate-900"
             )}
         >
-            <Icon size={16} /> {label}
+            <Icon size={20} className={cn("transition-colors", active ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-600")} />
+            <span>{label}</span>
+            {active && <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-indigo-600 rounded-l-full" />}
         </button>
     )
 }
 
-// --- VIEW 1: DASHBOARD (FULL FEATURES RESTORED) ---
-function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProject }) {
+// --- DASHBOARD (With "Add to Agenda" Switch) ---
+function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProject, t }) {
   const [formData, setFormData] = useState({ 
     content: "", project: "", energy: "medium", isUrgent: false, 
-    dueDate: "", step: "" 
+    dueDate: "", step: "", addToAgenda: false 
   });
   const [focusMode, setFocusMode] = useState({ isOpen: false, mode: "ready" });
 
-  const handleAdd = (e, asSomeday = false) => {
+  const handleAdd = async (e, asSomeday = false) => {
     if (e) e.preventDefault();
     if (!formData.content.trim()) return;
     const finalProject = filterProject || formData.project;
-    const payload = { ...formData, project: finalProject, isSomeday: asSomeday, step: formData.step ? parseInt(formData.step) : null, subtasks: [] };
     
-    axios.post(`${API_URL}/tasks`, payload, { headers: { "x-user-id": user.uid } })
-      .then(() => {
-        refreshTasks();
-        setFormData({ ...formData, content: "", isUrgent: false, dueDate: "", step: "", project: filterProject ? "" : formData.project });
-      });
+    // 1. Create Task
+    const taskPayload = { ...formData, project: finalProject, isSomeday: asSomeday, step: formData.step ? parseInt(formData.step) : null, subtasks: [] };
+    await axios.post(`${API_URL}/tasks`, taskPayload, { headers: { "x-user-id": user.uid } });
+
+    // 2. Add to Agenda? (New Feature)
+    if (formData.addToAgenda && formData.dueDate) {
+         const agendaPayload = { content: formData.content, time_slot: "", date: formData.dueDate, isCompleted: false };
+         await axios.post(`${API_URL}/agenda`, agendaPayload, { headers: { "x-user-id": user.uid } });
+         confetti({ particleCount: 30, spread: 40, origin: { y: 0.7 } }); // Extra confetti for double add
+    }
+
+    refreshTasks();
+    setFormData({ ...formData, content: "", isUrgent: false, dueDate: "", step: "", addToAgenda: false, project: filterProject ? "" : formData.project });
   };
 
   const handleDelete = (id) => { if(confirm("Delete task?")) axios.delete(`${API_URL}/tasks/${id}`, { headers: { "x-user-id": user.uid } }).then(refreshTasks); };
   const handleUpdate = (task) => { axios.put(`${API_URL}/tasks/${task.id}`, task, { headers: { "x-user-id": user.uid } }).then(refreshTasks); };
   
   const ClearButton = ({ onClick }) => (
-    <button type="button" onClick={onClick} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-rose-500 transition-colors z-10 p-1">
-        <XCircle size={20} />
-    </button>
+    <button type="button" onClick={onClick} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-rose-500 transition-colors z-10 p-1"><XCircle size={20} /></button>
   );
 
   const visibleTasks = useMemo(() => {
@@ -237,7 +334,7 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
     <div>
        {filterProject && (
          <div className="mb-6 animate-in slide-in-from-right-4">
-             <button onClick={() => setFilterProject(null)} className="flex items-center gap-2 text-slate-400 hover:text-slate-800 font-bold mb-4 text-sm"><ArrowLeft size={16} /> Back to Dashboard</button>
+             <button onClick={() => setFilterProject(null)} className="flex items-center gap-2 text-slate-400 hover:text-slate-800 font-bold mb-4 text-sm"><ArrowLeft size={16} /> Back</button>
              <div className="bg-indigo-600 rounded-3xl p-8 text-white shadow-lg relative overflow-hidden">
                 <h1 className="text-3xl font-black mb-4">{filterProject}</h1>
                 <div className="bg-black/20 h-3 rounded-full overflow-hidden mb-2">
@@ -252,62 +349,50 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm mb-8 animate-in slide-in-from-bottom-4">
             <div className="flex items-center gap-3 mb-6">
                 <div className="bg-indigo-50 p-2 rounded-xl"><Flame className="text-indigo-600 w-5 h-5" /></div>
-                <h2 className="text-xl font-bold text-slate-900">Brain Dump</h2>
+                <h2 className="text-xl font-bold text-slate-900">{t.brainDump}</h2>
             </div>
             
             <form onSubmit={(e) => handleAdd(e, false)} className="space-y-6">
                 <div className="relative">
-                    <input 
-                        className="w-full p-4 pr-12 text-lg border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400" 
-                        placeholder="What needs to be done?" 
-                        value={formData.content} 
-                        onChange={(e) => setFormData({...formData, content: e.target.value})} 
-                        autoFocus 
-                    />
+                    <input className="w-full p-4 pr-12 text-lg border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400" placeholder={t.whatToDo} value={formData.content} onChange={(e) => setFormData({...formData, content: e.target.value})} autoFocus />
                     {formData.content && <ClearButton onClick={() => setFormData({...formData, content: ""})} />}
                 </div>
 
                 <div className="flex flex-col md:flex-row gap-4">
                     <div className="relative flex-[2]">
-                        <input 
-                            className="w-full p-4 pr-12 text-lg border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400" 
-                            placeholder="Project Name (Optional)" 
-                            value={formData.project} 
-                            onChange={(e) => setFormData({...formData, project: e.target.value})} 
-                        />
+                        <input className="w-full p-4 pr-12 text-lg border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400" placeholder={t.projName} value={formData.project} onChange={(e) => setFormData({...formData, project: e.target.value})} />
                         {formData.project && <ClearButton onClick={() => setFormData({...formData, project: ""})} />}
                     </div>
                     <div className="relative flex-1">
-                        <input 
-                            type="number" min="1" 
-                            className="w-full p-4 pr-12 text-lg border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400" 
-                            placeholder="Step #" 
-                            value={formData.step} 
-                            onChange={(e) => setFormData({...formData, step: e.target.value})} 
-                        />
+                        <input type="number" min="1" className="w-full p-4 pr-12 text-lg border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400" placeholder={t.step} value={formData.step} onChange={(e) => setFormData({...formData, step: e.target.value})} />
                         {formData.step && <ClearButton onClick={() => setFormData({...formData, step: ""})} />}
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-bold text-slate-500 mb-2 uppercase tracking-wider">Target Date</label>
+                        <label className="block text-sm font-bold text-slate-500 mb-2 uppercase tracking-wider">{t.targetDate}</label>
                         <div className="flex items-center gap-2 p-3 border border-slate-200 rounded-xl bg-white h-[60px] relative">
                             <Calendar className="text-slate-400 ml-2" />
                             <input type="date" className="w-full outline-none text-slate-600 font-medium bg-transparent uppercase" value={formData.dueDate} onChange={(e) => setFormData({...formData, dueDate: e.target.value})} />
                             {formData.dueDate && (
-                                <button type="button" onClick={() => setFormData({...formData, dueDate: ""})} className="absolute right-2 p-2 hover:bg-rose-50 hover:text-rose-500 rounded-full text-slate-300 transition-colors">
-                                    <X size={18} />
-                                </button>
+                                <button type="button" onClick={() => setFormData({...formData, dueDate: ""})} className="absolute right-2 p-2 hover:bg-rose-50 hover:text-rose-500 rounded-full text-slate-300 transition-colors"><X size={18} /></button>
                             )}
                         </div>
+                        {/* --- NEW: ADD TO AGENDA SWITCH --- */}
+                        {formData.dueDate && (
+                             <div className="mt-2 flex items-center gap-2 px-1 animate-in fade-in slide-in-from-top-1">
+                                <input type="checkbox" id="agendaToggle" checked={formData.addToAgenda} onChange={e => setFormData({...formData, addToAgenda: e.target.checked})} className="accent-indigo-600 w-4 h-4" />
+                                <label htmlFor="agendaToggle" className="text-xs font-bold text-indigo-600 cursor-pointer">{t.addToAgenda}</label>
+                             </div>
+                        )}
                     </div>
                     <div>
-                        <label className="block text-sm font-bold text-slate-500 mb-2 uppercase tracking-wider">Priority Level</label>
+                        <label className="block text-sm font-bold text-slate-500 mb-2 uppercase tracking-wider">{t.priority}</label>
                         <div className="flex items-center justify-between p-3 border border-slate-200 rounded-xl bg-white h-[60px]">
                             <div className="flex items-center gap-3">
                                 <Zap className={cn("w-5 h-5 ml-2", formData.isUrgent ? "text-amber-500 fill-amber-500" : "text-slate-300")} />
-                                <span className="font-bold text-slate-700">Urgent?</span>
+                                <span className="font-bold text-slate-700">{t.urgent}</span>
                             </div>
                             <button type="button" onClick={() => setFormData({...formData, isUrgent: !formData.isUrgent})} className={cn("w-12 h-7 rounded-full transition-colors relative", formData.isUrgent ? "bg-slate-900" : "bg-slate-200")}>
                                 <div className={cn("w-5 h-5 bg-white rounded-full absolute top-1 transition-transform", formData.isUrgent ? "left-6" : "left-1")} />
@@ -317,12 +402,12 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
                 </div>
 
                 <div>
-                    <label className="block text-sm font-bold text-slate-500 mb-3 uppercase tracking-wider">Energy Required</label>
+                    <label className="block text-sm font-bold text-slate-500 mb-3 uppercase tracking-wider">{t.energy}</label>
                     <div className="flex gap-2">
                     {[
-                        { id: "low", label: "LOW", icon: Battery, activeClass: "bg-emerald-100 border-emerald-400 text-emerald-800 ring-2 ring-emerald-200" },
-                        { id: "medium", label: "MED", icon: BatteryMedium, activeClass: "bg-amber-100 border-amber-400 text-amber-800 ring-2 ring-amber-200" },
-                        { id: "high", label: "HIGH", icon: BatteryFull, activeClass: "bg-rose-100 border-rose-400 text-rose-800 ring-2 ring-rose-200" }
+                        { id: "low", label: t.low, icon: Battery, activeClass: "bg-emerald-100 border-emerald-400 text-emerald-800 ring-2 ring-emerald-200" },
+                        { id: "medium", label: t.med, icon: BatteryMedium, activeClass: "bg-amber-100 border-amber-400 text-amber-800 ring-2 ring-amber-200" },
+                        { id: "high", label: t.high, icon: BatteryFull, activeClass: "bg-rose-100 border-rose-400 text-rose-800 ring-2 ring-rose-200" }
                     ].map((opt) => (
                         <button key={opt.id} type="button" onClick={() => setFormData({...formData, energy: opt.id})} className={cn("flex-1 py-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all", formData.energy === opt.id ? opt.activeClass : "bg-white border-slate-200 text-slate-400 hover:bg-slate-50")}>
                         <opt.icon size={20} />
@@ -333,8 +418,8 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
                 </div>
 
                 <div className="space-y-3 pt-4">
-                    <button type="submit" className="w-full bg-slate-900 text-white font-bold text-lg py-4 rounded-xl hover:bg-slate-800 transition-transform active:scale-[0.98] flex items-center justify-center gap-2 shadow-xl shadow-slate-900/10"><Plus size={20} /> Add to Bucket</button>
-                    <button type="button" onClick={(e) => handleAdd(e, true)} className="w-full bg-slate-100 text-slate-500 font-bold text-lg py-3 rounded-xl hover:bg-slate-200 hover:text-slate-700 transition-colors flex items-center justify-center gap-2"><Archive size={20} /> Move to Someday</button>
+                    <button type="submit" className="w-full bg-slate-900 text-white font-bold text-lg py-4 rounded-xl hover:bg-slate-800 transition-transform active:scale-[0.98] flex items-center justify-center gap-2 shadow-xl shadow-slate-900/10"><Plus size={20} /> {t.addBucket}</button>
+                    <button type="button" onClick={(e) => handleAdd(e, true)} className="w-full bg-slate-100 text-slate-500 font-bold text-lg py-3 rounded-xl hover:bg-slate-200 hover:text-slate-700 transition-colors flex items-center justify-center gap-2"><Archive size={20} /> {t.moveSomeday}</button>
                 </div>
             </form>
        </div>
@@ -368,17 +453,13 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
           </div>
        )}
 
-        <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white/95 to-transparent pt-12 pointer-events-none">
-            <div className="max-w-3xl mx-auto flex gap-4 pointer-events-auto">
-            <button onClick={() => setFocusMode({ isOpen: true, mode: "tired" })} className="flex-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 py-4 rounded-2xl flex flex-col items-center gap-1 transition-transform hover:-translate-y-1 shadow-lg shadow-emerald-900/10">
-                <div className="flex items-center gap-2 font-bold text-lg"><Battery className="w-5 h-5" /> I'm Tired</div>
-                <span className="text-xs opacity-75 font-medium">Low Energy Mode</span>
+        <div className="fixed bottom-6 right-6 flex gap-3 z-50">
+            <button onClick={() => setFocusMode({ isOpen: true, mode: "tired" })} className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-6 py-3 rounded-full font-bold shadow-lg flex items-center gap-2 transition-transform hover:-translate-y-1">
+                <Battery size={20} /> {t.imTired}
             </button>
-            <button onClick={() => setFocusMode({ isOpen: true, mode: "ready" })} className="flex-1 bg-slate-900 hover:bg-slate-800 text-white py-4 rounded-2xl flex flex-col items-center gap-1 transition-transform hover:-translate-y-1 shadow-xl shadow-slate-900/20">
-                <div className="flex items-center gap-2 font-bold text-lg"><Zap className="w-5 h-5" /> I'm Ready</div>
-                <span className="text-xs text-slate-400 font-medium">Normal / High Energy</span>
+            <button onClick={() => setFocusMode({ isOpen: true, mode: "ready" })} className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-full font-bold shadow-xl flex items-center gap-2 transition-transform hover:-translate-y-1">
+                <Zap size={20} /> {t.imReady}
             </button>
-            </div>
         </div>
         
         <FocusOverlay isOpen={focusMode.isOpen} onClose={() => setFocusMode({...focusMode, isOpen: false})} tasks={tasks} mode={focusMode.mode} onComplete={(t) => handleUpdate({...t, isCompleted: true})} />
@@ -386,8 +467,8 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
   );
 }
 
-// --- VIEW 2: PROJECTS GALLERY ---
-function ProjectsListView({ tasks, onSelectProject }) {
+// --- PROJECTS (With Floating Add Button) ---
+function ProjectsListView({ tasks, onSelectProject, t }) {
     const projects = useMemo(() => {
         const map = {};
         tasks.forEach(t => {
@@ -400,7 +481,7 @@ function ProjectsListView({ tasks, onSelectProject }) {
     }, [tasks]);
 
     const handleCreate = () => {
-        const name = prompt("Enter new project name:");
+        const name = prompt(t.projName + ":");
         if (name && name.trim()) {
             onSelectProject(name.trim());
         }
@@ -426,23 +507,19 @@ function ProjectsListView({ tasks, onSelectProject }) {
                         </button>
                     )
                 })}
-                <button 
-                    onClick={handleCreate}
-                    className="bg-slate-100 border-2 border-dashed border-slate-300 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 text-slate-400 hover:bg-white hover:border-indigo-400 hover:text-indigo-600 transition-all group min-h-[160px]"
-                >
-                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                        <Plus size={24} />
-                    </div>
-                    <span className="font-bold">Create New Project</span>
-                </button>
             </div>
             {projects.length === 0 && <div className="text-center py-10 text-slate-400">No projects yet.</div>}
+            
+            {/* FLOATING ACTION BUTTON */}
+            <button onClick={handleCreate} className="fixed bottom-8 right-8 w-16 h-16 bg-indigo-600 rounded-full text-white shadow-2xl flex items-center justify-center hover:bg-indigo-700 hover:scale-110 transition-all z-50">
+                <Plus size={32} strokeWidth={3} />
+            </button>
         </div>
     )
 }
 
-// --- VIEW 3: AGENDA ---
-function AgendaView({ user }) {
+// --- AGENDA (Separated Today vs Other) ---
+function AgendaView({ user, t }) {
     const [items, setItems] = useState([]);
     const [newItem, setNewItem] = useState({ time: "", content: "", date: new Date().toISOString().split('T')[0] });
 
@@ -468,15 +545,34 @@ function AgendaView({ user }) {
         setItems(items.filter(i => i.id !== id));
     };
 
-    // Sort: Date then Time
-    const sortedItems = [...items].sort((a, b) => {
-        if (a.date !== b.date) return (a.date || "").localeCompare(b.date || "");
-        return (a.time_slot || "").localeCompare(b.time_slot || "");
-    });
+    // Logic to separate items
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayItems = items.filter(i => i.date === todayStr).sort((a,b) => (a.time_slot||"").localeCompare(b.time_slot||""));
+    const otherItems = items.filter(i => i.date !== todayStr).sort((a,b) => (a.date||"").localeCompare(b.date||""));
+
+    const AgendaList = ({ list }) => (
+        <div className="space-y-3">
+            {list.map(item => (
+                <div key={item.id} className="flex items-center gap-4 group">
+                    <div className="text-right w-20 shrink-0">
+                            <div className="text-xs font-bold text-slate-400">{item.date === todayStr ? item.time_slot : item.date}</div>
+                            {item.date !== todayStr && <div className="text-xs font-bold text-slate-300">{item.time_slot}</div>}
+                    </div>
+                    <div className={cn("flex-1 bg-white p-4 rounded-xl border border-slate-200 flex items-center gap-3 shadow-sm", item.isCompleted && "opacity-50")}>
+                        <button onClick={() => toggleItem(item)} className={cn("w-5 h-5 border-2 rounded-full flex items-center justify-center", item.isCompleted ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-300")}>
+                            {item.isCompleted && <Check size={12} />}
+                        </button>
+                        <span className={cn("font-bold text-slate-700", item.isCompleted && "line-through")}>{item.content}</span>
+                    </div>
+                    <button onClick={() => deleteItem(item.id)} className="opacity-0 group-hover:opacity-100 text-rose-300 hover:text-rose-500"><Trash2 size={18} /></button>
+                </div>
+            ))}
+        </div>
+    );
 
     return (
         <div className="pb-32">
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mb-6">
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mb-8">
                 <form onSubmit={handleAdd} className="flex flex-col md:flex-row gap-2">
                     <input type="date" className="p-3 bg-slate-50 rounded-lg font-bold text-sm text-slate-500" value={newItem.date} onChange={e => setNewItem({...newItem, date: e.target.value})} />
                     <input className="w-full md:w-24 p-3 bg-slate-50 rounded-lg font-bold text-sm" placeholder="9:00" value={newItem.time} onChange={e => setNewItem({...newItem, time: e.target.value})} />
@@ -484,27 +580,25 @@ function AgendaView({ user }) {
                     <button type="submit" className="bg-indigo-600 text-white p-3 rounded-lg hover:bg-indigo-700"><Plus size={20}/></button>
                 </form>
             </div>
-            <div className="space-y-3">
-                {sortedItems.map(item => (
-                    <div key={item.id} className="flex items-center gap-4 group">
-                        <div className="text-right">
-                             <div className="text-xs font-bold text-slate-400">{item.date}</div>
-                             <div className="text-sm font-bold text-slate-600">{item.time_slot}</div>
-                        </div>
-                        <div className={cn("flex-1 bg-white p-4 rounded-xl border border-slate-200 flex items-center gap-3 shadow-sm", item.isCompleted && "opacity-50")}>
-                            <button onClick={() => toggleItem(item)} className={cn("w-5 h-5 border-2 rounded-full flex items-center justify-center", item.isCompleted ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-300")}>
-                                {item.isCompleted && <Check size={12} />}
-                            </button>
-                            <span className={cn("font-bold text-slate-700", item.isCompleted && "line-through")}>{item.content}</span>
-                        </div>
-                        <button onClick={() => deleteItem(item.id)} className="opacity-0 group-hover:opacity-100 text-rose-300 hover:text-rose-500"><Trash2 size={18} /></button>
-                    </div>
-                ))}
-            </div>
+
+            {todayItems.length > 0 && (
+                <div className="mb-8">
+                    <h3 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-emerald-500"/> {t.today}</h3>
+                    <AgendaList list={todayItems} />
+                </div>
+            )}
+
+            {otherItems.length > 0 && (
+                <div>
+                     <h3 className="text-lg font-black text-slate-400 mb-4">{t.upcoming}</h3>
+                     <AgendaList list={otherItems} />
+                </div>
+            )}
         </div>
     )
 }
 
+// --- TASK CARD (UNCHANGED) ---
 function TaskCard({ task, onDelete, onUpdate, onProjectClick }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState(task);
