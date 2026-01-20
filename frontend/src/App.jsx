@@ -192,7 +192,7 @@ export default function App() {
         <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-xl border border-slate-100">
           <div className="text-center mb-8">
             <div className="inline-block bg-indigo-50 p-4 rounded-2xl mb-4"><LayoutGrid className="w-10 h-10 text-indigo-600" /></div>
-            <h1 className="text-3xl font-black text-slate-900 mb-2"><span className="text-indigo-500">ADHD </span>Focus Mate</h1>
+            <h1 className="text-3xl font-black text-slate-900 mb-2"><span className="text-indigo-500">ADHD </span>Focus Mate<span className="text-indigo-500">.</span></h1>
             <p className="text-slate-500">Sign in to organize your brain.</p>
           </div>
           <div className="space-y-3 mb-6">
@@ -274,7 +274,8 @@ function MainLayout({ user, onLogout }) {
           <div className="p-6 flex items-center justify-between">
              <div className="flex items-center gap-3">
                 <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-black">FM</div>
-                <span className="font-black text-slate-800 text-lg">Focus Mate</span>
+                <span className="text-indigo-500">ADHD</span> Focus Mate<span className="text-indigo-500">.</span>
+                <p className="text-slate-500 text-sm">Hello, {user.email}</p>
              </div>
              {/* Close Button (Mobile Only) */}
              <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-400 hover:text-slate-600">
