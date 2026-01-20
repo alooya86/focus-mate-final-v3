@@ -605,6 +605,7 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
   );
 }
 
+// --- PROJECTS VIEW (RTL FIXED) ---
 function ProjectsListView({ tasks, onSelectProject }) {
     const { t } = useTranslation();
     const projects = useMemo(() => {
@@ -648,17 +649,26 @@ function ProjectsListView({ tasks, onSelectProject }) {
             </div>
             {projects.length === 0 && <div className="text-center py-10 text-slate-400">No projects yet.</div>}
             
-            <button onClick={handleCreate} className="fixed bottom-8 right-8 w-16 h-16 bg-indigo-600 rounded-full text-white shadow-2xl flex items-center justify-center hover:bg-indigo-700 hover:scale-110 transition-all z-50">
+            {/* RTL FIXED BUTTON */}
+            <button 
+                onClick={handleCreate} 
+                className="fixed bottom-8 right-8 rtl:right-auto rtl:left-8 w-16 h-16 bg-indigo-600 rounded-full text-white shadow-2xl flex items-center justify-center hover:bg-indigo-700 hover:scale-110 transition-all z-50"
+            >
                 <Plus size={32} strokeWidth={3} />
             </button>
         </div>
     )
 }
 
+// --- AGENDA VIEW (With Day Names + Editing) ---
 function AgendaView({ user }) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation(); // Need i18n for date formatting
     const [items, setItems] = useState([]);
     const [newItem, setNewItem] = useState({ time: "", content: "", date: new Date().toISOString().split('T')[0] });
+    
+    // Editing State
+    const [editingId, setEditingId] = useState(null);
+    const [editForm, setEditForm] = useState({ content: "", time: "" });
 
     useEffect(() => {
         axios.get(`${API_URL}/agenda`, { headers: { "x-user-id": user.uid } }).then(res => setItems(res.data));
@@ -678,8 +688,29 @@ function AgendaView({ user }) {
     };
 
     const deleteItem = (id) => {
-        axios.delete(`${API_URL}/agenda/${id}`, { headers: { "x-user-id": user.uid } });
-        setItems(items.filter(i => i.id !== id));
+        if(confirm("Delete this item?")) {
+            axios.delete(`${API_URL}/agenda/${id}`, { headers: { "x-user-id": user.uid } });
+            setItems(items.filter(i => i.id !== id));
+        }
+    };
+
+    const startEditing = (item) => {
+        setEditingId(item.id);
+        setEditForm({ content: item.content, time: item.time_slot });
+    };
+
+    const saveEdit = (id) => {
+        const item = items.find(i => i.id === id);
+        const updated = { ...item, content: editForm.content, time_slot: editForm.time };
+        axios.put(`${API_URL}/agenda/${id}`, updated, { headers: { "x-user-id": user.uid } });
+        setItems(items.map(i => i.id === id ? updated : i));
+        setEditingId(null);
+    };
+
+    // Helper to get localized weekday (e.g., "Mon", "Lundi", "الاثنين")
+    const getDayName = (dateStr) => {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString(i18n.language, { weekday: 'short' });
     };
 
     const todayStr = new Date().toISOString().split('T')[0];
@@ -690,17 +721,59 @@ function AgendaView({ user }) {
         <div className="space-y-3">
             {list.map(item => (
                 <div key={item.id} className="flex items-center gap-4 group">
-                    <div className="text-right w-20 shrink-0">
-                            <div className="text-xs font-bold text-slate-400">{item.date === todayStr ? item.time_slot : item.date}</div>
-                            {item.date !== todayStr && <div className="text-xs font-bold text-slate-300">{item.time_slot}</div>}
+                    {/* Left Column: Day, Date, Time */}
+                    <div className="text-right w-24 shrink-0 flex flex-col items-end">
+                        {editingId === item.id ? (
+                            <input 
+                                className="w-full text-right text-xs font-bold p-1 border rounded" 
+                                value={editForm.time} 
+                                onChange={e => setEditForm({...editForm, time: e.target.value})}
+                            />
+                        ) : (
+                            <>
+                                {/* Day Name (e.g. MON) */}
+                                <div className="text-xs font-black text-indigo-500 uppercase tracking-wider">
+                                    {item.date === todayStr ? t('today') : getDayName(item.date)}
+                                </div>
+                                
+                                {/* Date (e.g. 2024-01-20) - Only if not today */}
+                                {item.date !== todayStr && (
+                                    <div className="text-[10px] font-bold text-slate-400">{item.date}</div>
+                                )}
+
+                                {/* Time Slot */}
+                                <div className="text-xs font-bold text-slate-600">{item.time_slot}</div>
+                            </>
+                        )}
                     </div>
+
+                    {/* Right Column: Task Content */}
                     <div className={cn("flex-1 bg-white p-4 rounded-xl border border-slate-200 flex items-center gap-3 shadow-sm", item.isCompleted && "opacity-50")}>
-                        <button onClick={() => toggleItem(item)} className={cn("w-5 h-5 border-2 rounded-full flex items-center justify-center", item.isCompleted ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-300")}>
-                            {item.isCompleted && <Check size={12} />}
-                        </button>
-                        <span className={cn("font-bold text-slate-700", item.isCompleted && "line-through")}>{item.content}</span>
+                        {editingId === item.id ? (
+                            <div className="flex-1 flex gap-2">
+                                <input 
+                                    className="flex-1 font-bold text-slate-700 p-1 border rounded outline-none focus:ring-2 focus:ring-indigo-500/20" 
+                                    value={editForm.content} 
+                                    onChange={e => setEditForm({...editForm, content: e.target.value})}
+                                    autoFocus
+                                />
+                                <button onClick={() => saveEdit(item.id)} className="p-1 bg-indigo-100 text-indigo-600 rounded hover:bg-indigo-200"><Check size={16}/></button>
+                                <button onClick={() => setEditingId(null)} className="p-1 text-slate-400 hover:text-slate-600"><X size={16}/></button>
+                            </div>
+                        ) : (
+                            <>
+                                <button onClick={() => toggleItem(item)} className={cn("w-5 h-5 border-2 rounded-full flex items-center justify-center flex-shrink-0", item.isCompleted ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-300")}>
+                                    {item.isCompleted && <Check size={12} />}
+                                </button>
+                                <span className={cn("font-bold text-slate-700", item.isCompleted && "line-through")}>{item.content}</span>
+                            </>
+                        )}
                     </div>
-                    <button onClick={() => deleteItem(item.id)} className="opacity-0 group-hover:opacity-100 text-rose-300 hover:text-rose-500"><Trash2 size={18} /></button>
+                    
+                    <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => startEditing(item)} className="text-slate-300 hover:text-indigo-500"><Pencil size={16} /></button>
+                        <button onClick={() => deleteItem(item.id)} className="text-slate-300 hover:text-rose-500"><Trash2 size={16} /></button>
+                    </div>
                 </div>
             ))}
         </div>
