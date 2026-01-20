@@ -392,7 +392,7 @@ function SidebarItem({ icon: Icon, label, active, onClick }) {
 }
 
 function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProject }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation(); // Added i18n for RTL checks
   const [formData, setFormData] = useState({ 
     content: "", project: "", energy: "medium", isUrgent: false, 
     dueDate: "", step: "", addToAgenda: false 
@@ -450,8 +450,7 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
   }, [tasks, filterProject]);
 
   return (
-    // ADDED pb-40 HERE TO FIX SCROLLING
-    <div className="pb-40">
+    <div>
        {filterProject && (
          <div className="mb-6 animate-in slide-in-from-right-4">
              <button onClick={() => setFilterProject(null)} className="flex items-center gap-2 text-slate-400 hover:text-slate-800 font-bold mb-4 text-sm"><ArrowLeft size={16} /> Back</button>
@@ -591,8 +590,14 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
           </div>
        )}
 
+         {/* SPACER DIV: This forces the scrollbar to go deeper */}
+         <div className="h-48 w-full"></div>
+
          {/* FIXED FOOTER WITH CORRECT POSITIONING */}
-         <div className="fixed bottom-0 left-0 right-0 md:left-64 z-20 p-6 bg-gradient-to-t from-white via-white/95 to-transparent pt-12 pointer-events-none">
+         <div className={cn(
+             "fixed bottom-0 left-0 right-0 z-20 p-6 bg-gradient-to-t from-white via-white/95 to-transparent pt-12 pointer-events-none transition-all duration-300",
+             i18n.language === 'ar' ? "md:right-64 md:left-0" : "md:left-64 md:right-0"
+         )}>
             <div className="max-w-3xl mx-auto flex gap-4 pointer-events-auto">
             <button onClick={() => setFocusMode({ isOpen: true, mode: "tired" })} className="flex-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 py-4 rounded-2xl flex flex-col items-center gap-1 transition-transform hover:-translate-y-1 shadow-lg shadow-emerald-900/10">
                 <div className="flex items-center gap-2 font-bold text-lg"><Battery className="w-5 h-5" /> {t('imTired')}</div>
@@ -609,10 +614,9 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
     </div>
   );
 }
-
 // --- PROJECTS VIEW (RTL FIXED) ---
 function ProjectsListView({ tasks, onSelectProject }) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation(); // Need i18n for position check
     const projects = useMemo(() => {
         const map = {};
         tasks.forEach(t => {
@@ -630,6 +634,8 @@ function ProjectsListView({ tasks, onSelectProject }) {
             onSelectProject(name.trim());
         }
     };
+
+    const isArabic = i18n.language === 'ar';
 
     return (
         <div className="pb-32">
@@ -654,10 +660,13 @@ function ProjectsListView({ tasks, onSelectProject }) {
             </div>
             {projects.length === 0 && <div className="text-center py-10 text-slate-400">No projects yet.</div>}
             
-            {/* RTL FIXED BUTTON */}
+            {/* RTL FIXED BUTTON (Using JS Logic for strict positioning) */}
             <button 
                 onClick={handleCreate} 
-                className="fixed bottom-8 right-8 rtl:right-auto rtl:left-8 w-16 h-16 bg-indigo-600 rounded-full text-white shadow-2xl flex items-center justify-center hover:bg-indigo-700 hover:scale-110 transition-all z-50"
+                className={cn(
+                    "fixed bottom-8 w-16 h-16 bg-indigo-600 rounded-full text-white shadow-2xl flex items-center justify-center hover:bg-indigo-700 hover:scale-110 transition-all z-50",
+                    isArabic ? "left-8" : "right-8"
+                )}
             >
                 <Plus size={32} strokeWidth={3} />
             </button>
