@@ -348,7 +348,7 @@ function MainLayout({ user, onLogout }) {
             <span className="font-black text-slate-800 text-lg">Focus Mate</span>
          </div>
 
-         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 pb-48">
+         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 md:p-6 pb-48">
             <div className="max-w-4xl mx-auto">
                 {activeTab === "dashboard" && (
                     <DashboardView 
