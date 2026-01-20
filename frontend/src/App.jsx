@@ -4,12 +4,14 @@ import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Battery, BatteryFull, BatteryMedium, 
-  Inbox, Zap, Plus, X, CheckCircle2, Flame, Loader2, Trash2, Pencil, Save, Calendar, Archive,
-  Clock, LogOut, LayoutGrid, Mail, ArrowLeft, XCircle, ListTodo, Check, ChevronDown, ChevronUp,
-  Layout, FolderKanban, CalendarDays, Globe, User, Languages
+  Zap, Plus, X, CheckCircle2, Flame, Loader2, Trash2, Pencil, Save, Calendar, Archive,
+  Clock, LogOut, LayoutGrid, Mail, ArrowLeft, XCircle, Check, ChevronDown, ChevronUp,
+  Layout, FolderKanban, CalendarDays, Globe
 } from "lucide-react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+
+// --- FIREBASE IMPORTS ---
 import { initializeApp } from "firebase/app";
 import { 
   getAuth, signInWithPopup, GoogleAuthProvider, 
@@ -17,61 +19,78 @@ import {
   signOut, onAuthStateChanged 
 } from "firebase/auth";
 
-// --- TRANSLATIONS (Simple Internal System) ---
-const translations = {
-  en: {
-    dashboard: "Dashboard",
-    projects: "Projects",
-    agenda: "Agenda",
-    brainDump: "Brain Dump",
-    whatToDo: "What needs to be done?",
-    projName: "Project Name (Optional)",
-    step: "Step #",
-    targetDate: "Target Date",
-    priority: "Priority Level",
-    urgent: "Urgent?",
-    energy: "Energy Required",
-    addBucket: "Add to Bucket",
-    moveSomeday: "Move to Someday",
-    addToAgenda: "Add to Agenda also?",
-    today: "Today",
-    upcoming: "Upcoming / Past",
-    logout: "Logout",
-    welcome: "Hello",
-    low: "LOW", med: "MED", high: "HIGH",
-    focusMode: "Focus Mode",
-    imTired: "I'm Tired",
-    imReady: "I'm Ready",
-    createProject: "Create New Project"
-  },
-  es: {
-    dashboard: "Tablero",
-    projects: "Proyectos",
-    agenda: "Agenda",
-    brainDump: "Vaciado Mental",
-    whatToDo: "¿Qué necesitas hacer?",
-    projName: "Nombre del Proyecto (Opcional)",
-    step: "Paso #",
-    targetDate: "Fecha Objetivo",
-    priority: "Nivel de Prioridad",
-    urgent: "¿Urgente?",
-    energy: "Energía Requerida",
-    addBucket: "Añadir a la Cubeta",
-    moveSomeday: "Mover a Algún Día",
-    addToAgenda: "¿Añadir a la Agenda?",
-    today: "Hoy",
-    upcoming: "Próximos / Pasados",
-    logout: "Cerrar Sesión",
-    welcome: "Hola",
-    low: "BAJA", med: "MEDIA", high: "ALTA",
-    focusMode: "Modo Enfoque",
-    imTired: "Estoy Cansado",
-    imReady: "Estoy Listo",
-    createProject: "Crear Proyecto"
-  }
-};
+// --- I18N IMPORTS ---
+import i18n from "i18next";
+import { useTranslation, initReactI18next } from "react-i18next";
+import LanguageDetector from "i18next-browser-languagedetector";
 
-// ------------------------------------------------------------------
+// --- CONFIGURATION ---
+const API_URL = "https://focus-mate-final-v3.onrender.com"; 
+const cn = (...inputs) => twMerge(clsx(inputs));
+
+// --- I18N CONFIGURATION ---
+i18n
+  .use(LanguageDetector)
+  .use(initReactI18next)
+  .init({
+    resources: {
+      en: {
+        translation: {
+          dashboard: "Dashboard",
+          projects: "Projects",
+          agenda: "Agenda",
+          brainDump: "Brain Dump",
+          whatToDo: "What needs to be done?",
+          projName: "Project Name (Optional)",
+          step: "Step #",
+          targetDate: "Target Date",
+          priority: "Priority Level",
+          urgent: "Urgent?",
+          energy: "Energy Required",
+          addBucket: "Add to Bucket",
+          moveSomeday: "Move to Someday",
+          addToAgenda: "Add to Agenda also?",
+          today: "Today",
+          upcoming: "Upcoming / Past",
+          logout: "Logout",
+          welcome: "Hello",
+          low: "LOW", med: "MED", high: "HIGH",
+          imTired: "I'm Tired",
+          imReady: "I'm Ready",
+          createProject: "Create New Project"
+        }
+      },
+      es: {
+        translation: {
+          dashboard: "Tablero",
+          projects: "Proyectos",
+          agenda: "Agenda",
+          brainDump: "Vaciado Mental",
+          whatToDo: "¿Qué necesitas hacer?",
+          projName: "Nombre del Proyecto (Opcional)",
+          step: "Paso #",
+          targetDate: "Fecha Objetivo",
+          priority: "Nivel de Prioridad",
+          urgent: "¿Urgente?",
+          energy: "Energía Requerida",
+          addBucket: "Añadir a la Cubeta",
+          moveSomeday: "Mover a Algún Día",
+          addToAgenda: "¿Añadir a la Agenda?",
+          today: "Hoy",
+          upcoming: "Próximos / Pasados",
+          logout: "Cerrar Sesión",
+          welcome: "Hola",
+          low: "BAJA", med: "MEDIA", high: "ALTA",
+          imTired: "Estoy Cansado",
+          imReady: "Estoy Listo",
+          createProject: "Crear Proyecto"
+        }
+      }
+    },
+    fallbackLng: "en",
+    interpolation: { escapeValue: false }
+  });
+
 const API_URL = "https://focus-mate-final-v3.onrender.com"; 
 const cn = (...inputs) => twMerge(clsx(inputs));
 
@@ -82,7 +101,7 @@ const firebaseConfig = {
   storageBucket: "focus-mate-cb99f.firebasestorage.app",
   messagingSenderId: "174603807809",
   appId: "1:174603807809:web:52b7ba205b56e277b5eac0"
-
+};
 // ------------------------------------------------------------------
 
 const app = initializeApp(firebaseConfig);
@@ -117,7 +136,6 @@ export default function App() {
 
   if (loadingAuth) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-indigo-600" /></div>;
 
-  // --- LOGIN PAGE (UNCHANGED LAYOUT) ---
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
@@ -158,13 +176,10 @@ export default function App() {
   return <MainLayout user={user} onLogout={() => signOut(auth)} />;
 }
 
-// --- NEW SPLIT-SCREEN LAYOUT ---
 function MainLayout({ user, onLogout }) {
   const [activeTab, setActiveTab] = useState("dashboard"); 
   const [selectedProject, setSelectedProject] = useState(null);
-  const [lang, setLang] = useState("en"); // Language State
-  const t = translations[lang]; // Current Translation
-  
+  const { t, i18n } = useTranslation();
   const [tasks, setTasks] = useState([]);
   
   useEffect(() => { refreshTasks(); }, [user.uid]);
@@ -182,7 +197,6 @@ function MainLayout({ user, onLogout }) {
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
-      {/* 1. SIDEBAR (Previously Discussed Layout) */}
       <div className="w-64 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 transition-all z-20 shadow-xl md:shadow-none">
         <div>
           <div className="p-6 flex items-center gap-3">
@@ -191,17 +205,16 @@ function MainLayout({ user, onLogout }) {
           </div>
           
           <nav className="px-3 space-y-1 mt-2">
-            <SidebarItem icon={Layout} label={t.dashboard} active={activeTab === "dashboard" && !selectedProject} onClick={() => { setActiveTab("dashboard"); setSelectedProject(null); }} />
-            <SidebarItem icon={FolderKanban} label={t.projects} active={activeTab === "projects"} onClick={() => { setActiveTab("projects"); setSelectedProject(null); }} />
-            <SidebarItem icon={CalendarDays} label={t.agenda} active={activeTab === "agenda"} onClick={() => { setActiveTab("agenda"); setSelectedProject(null); }} />
+            <SidebarItem icon={Layout} label={t('dashboard')} active={activeTab === "dashboard" && !selectedProject} onClick={() => { setActiveTab("dashboard"); setSelectedProject(null); }} />
+            <SidebarItem icon={FolderKanban} label={t('projects')} active={activeTab === "projects"} onClick={() => { setActiveTab("projects"); setSelectedProject(null); }} />
+            <SidebarItem icon={CalendarDays} label={t('agenda')} active={activeTab === "agenda"} onClick={() => { setActiveTab("agenda"); setSelectedProject(null); }} />
           </nav>
 
-          {/* LANGUAGE SWITCHER */}
           <div className="px-6 mt-8">
             <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2"><Globe size={12}/> Language</div>
             <div className="flex bg-slate-100 p-1 rounded-lg">
-                <button onClick={() => setLang("en")} className={cn("flex-1 py-1 rounded-md text-xs font-bold transition-all", lang === 'en' ? "bg-white text-indigo-600 shadow-sm" : "text-slate-400")}>EN</button>
-                <button onClick={() => setLang("es")} className={cn("flex-1 py-1 rounded-md text-xs font-bold transition-all", lang === 'es' ? "bg-white text-indigo-600 shadow-sm" : "text-slate-400")}>ES</button>
+                <button onClick={() => i18n.changeLanguage('en')} className={cn("flex-1 py-1 rounded-md text-xs font-bold transition-all", i18n.language === 'en' ? "bg-white text-indigo-600 shadow-sm" : "text-slate-400")}>EN</button>
+                <button onClick={() => i18n.changeLanguage('es')} className={cn("flex-1 py-1 rounded-md text-xs font-bold transition-all", i18n.language === 'es' ? "bg-white text-indigo-600 shadow-sm" : "text-slate-400")}>ES</button>
             </div>
           </div>
         </div>
@@ -212,18 +225,17 @@ function MainLayout({ user, onLogout }) {
                 {user.email[0].toUpperCase()}
              </div>
              <div className="overflow-hidden">
-                <p className="text-xs text-slate-500 font-medium">{t.welcome}</p>
+                <p className="text-xs text-slate-500 font-medium">{t('welcome')}</p>
                 <p className="text-xs font-bold text-slate-900 truncate w-32">{user.email}</p>
              </div>
           </div>
           <button onClick={onLogout} className="w-full flex items-center gap-3 px-2 py-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
             <LogOut size={18} />
-            <span className="font-bold text-sm">{t.logout}</span>
+            <span className="font-bold text-sm">{t('logout')}</span>
           </button>
         </div>
       </div>
 
-      {/* 2. MAIN CONTENT AREA */}
       <div className="flex-1 overflow-y-auto relative bg-slate-50">
          <div className="max-w-4xl mx-auto p-6 pb-32">
             {activeTab === "dashboard" && (
@@ -233,18 +245,16 @@ function MainLayout({ user, onLogout }) {
                     refreshTasks={refreshTasks} 
                     filterProject={selectedProject} 
                     setFilterProject={setSelectedProject}
-                    t={t}
                 />
             )}
             {activeTab === "projects" && (
                 <ProjectsListView 
                     tasks={tasks} 
                     onSelectProject={goToProject}
-                    t={t}
                 />
             )}
             {activeTab === "agenda" && (
-                <AgendaView user={user} t={t} />
+                <AgendaView user={user} />
             )}
          </div>
       </div>
@@ -268,8 +278,8 @@ function SidebarItem({ icon: Icon, label, active, onClick }) {
     )
 }
 
-// --- DASHBOARD (With "Add to Agenda" Switch) ---
-function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProject, t }) {
+function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProject }) {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({ 
     content: "", project: "", energy: "medium", isUrgent: false, 
     dueDate: "", step: "", addToAgenda: false 
@@ -281,15 +291,13 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
     if (!formData.content.trim()) return;
     const finalProject = filterProject || formData.project;
     
-    // 1. Create Task
     const taskPayload = { ...formData, project: finalProject, isSomeday: asSomeday, step: formData.step ? parseInt(formData.step) : null, subtasks: [] };
     await axios.post(`${API_URL}/tasks`, taskPayload, { headers: { "x-user-id": user.uid } });
 
-    // 2. Add to Agenda? (New Feature)
     if (formData.addToAgenda && formData.dueDate) {
          const agendaPayload = { content: formData.content, time_slot: "", date: formData.dueDate, isCompleted: false };
          await axios.post(`${API_URL}/agenda`, agendaPayload, { headers: { "x-user-id": user.uid } });
-         confetti({ particleCount: 30, spread: 40, origin: { y: 0.7 } }); // Extra confetti for double add
+         confetti({ particleCount: 30, spread: 40, origin: { y: 0.7 } });
     }
 
     refreshTasks();
@@ -345,50 +353,68 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm mb-8 animate-in slide-in-from-bottom-4">
             <div className="flex items-center gap-3 mb-6">
                 <div className="bg-indigo-50 p-2 rounded-xl"><Flame className="text-indigo-600 w-5 h-5" /></div>
-                <h2 className="text-xl font-bold text-slate-900">{t.brainDump}</h2>
+                <h2 className="text-xl font-bold text-slate-900">{t('brainDump')}</h2>
             </div>
             
             <form onSubmit={(e) => handleAdd(e, false)} className="space-y-6">
                 <div className="relative">
-                    <input className="w-full p-4 pr-12 text-lg border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400" placeholder={t.whatToDo} value={formData.content} onChange={(e) => setFormData({...formData, content: e.target.value})} autoFocus />
+                    <input 
+                        className="w-full p-4 pr-12 text-lg border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400" 
+                        placeholder={t('whatToDo')} 
+                        value={formData.content} 
+                        onChange={(e) => setFormData({...formData, content: e.target.value})} 
+                        autoFocus 
+                    />
                     {formData.content && <ClearButton onClick={() => setFormData({...formData, content: ""})} />}
                 </div>
 
                 <div className="flex flex-col md:flex-row gap-4">
                     <div className="relative flex-[2]">
-                        <input className="w-full p-4 pr-12 text-lg border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400" placeholder={t.projName} value={formData.project} onChange={(e) => setFormData({...formData, project: e.target.value})} />
+                        <input 
+                            className="w-full p-4 pr-12 text-lg border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400" 
+                            placeholder={t('projName')} 
+                            value={formData.project} 
+                            onChange={(e) => setFormData({...formData, project: e.target.value})} 
+                        />
                         {formData.project && <ClearButton onClick={() => setFormData({...formData, project: ""})} />}
                     </div>
                     <div className="relative flex-1">
-                        <input type="number" min="1" className="w-full p-4 pr-12 text-lg border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400" placeholder={t.step} value={formData.step} onChange={(e) => setFormData({...formData, step: e.target.value})} />
+                        <input 
+                            type="number" min="1" 
+                            className="w-full p-4 pr-12 text-lg border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400" 
+                            placeholder={t('step')} 
+                            value={formData.step} 
+                            onChange={(e) => setFormData({...formData, step: e.target.value})} 
+                        />
                         {formData.step && <ClearButton onClick={() => setFormData({...formData, step: ""})} />}
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-bold text-slate-500 mb-2 uppercase tracking-wider">{t.targetDate}</label>
+                        <label className="block text-sm font-bold text-slate-500 mb-2 uppercase tracking-wider">{t('targetDate')}</label>
                         <div className="flex items-center gap-2 p-3 border border-slate-200 rounded-xl bg-white h-[60px] relative">
                             <Calendar className="text-slate-400 ml-2" />
                             <input type="date" className="w-full outline-none text-slate-600 font-medium bg-transparent uppercase" value={formData.dueDate} onChange={(e) => setFormData({...formData, dueDate: e.target.value})} />
                             {formData.dueDate && (
-                                <button type="button" onClick={() => setFormData({...formData, dueDate: ""})} className="absolute right-2 p-2 hover:bg-rose-50 hover:text-rose-500 rounded-full text-slate-300 transition-colors"><X size={18} /></button>
+                                <button type="button" onClick={() => setFormData({...formData, dueDate: ""})} className="absolute right-2 p-2 hover:bg-rose-50 hover:text-rose-500 rounded-full text-slate-300 transition-colors">
+                                    <X size={18} />
+                                </button>
                             )}
                         </div>
-                        {/* --- NEW: ADD TO AGENDA SWITCH --- */}
-                        {formData.dueDate && (
+                         {formData.dueDate && (
                              <div className="mt-2 flex items-center gap-2 px-1 animate-in fade-in slide-in-from-top-1">
                                 <input type="checkbox" id="agendaToggle" checked={formData.addToAgenda} onChange={e => setFormData({...formData, addToAgenda: e.target.checked})} className="accent-indigo-600 w-4 h-4" />
-                                <label htmlFor="agendaToggle" className="text-xs font-bold text-indigo-600 cursor-pointer">{t.addToAgenda}</label>
+                                <label htmlFor="agendaToggle" className="text-xs font-bold text-indigo-600 cursor-pointer">{t('addToAgenda')}</label>
                              </div>
                         )}
                     </div>
                     <div>
-                        <label className="block text-sm font-bold text-slate-500 mb-2 uppercase tracking-wider">{t.priority}</label>
+                        <label className="block text-sm font-bold text-slate-500 mb-2 uppercase tracking-wider">{t('priority')}</label>
                         <div className="flex items-center justify-between p-3 border border-slate-200 rounded-xl bg-white h-[60px]">
                             <div className="flex items-center gap-3">
                                 <Zap className={cn("w-5 h-5 ml-2", formData.isUrgent ? "text-amber-500 fill-amber-500" : "text-slate-300")} />
-                                <span className="font-bold text-slate-700">{t.urgent}</span>
+                                <span className="font-bold text-slate-700">{t('urgent')}</span>
                             </div>
                             <button type="button" onClick={() => setFormData({...formData, isUrgent: !formData.isUrgent})} className={cn("w-12 h-7 rounded-full transition-colors relative", formData.isUrgent ? "bg-slate-900" : "bg-slate-200")}>
                                 <div className={cn("w-5 h-5 bg-white rounded-full absolute top-1 transition-transform", formData.isUrgent ? "left-6" : "left-1")} />
@@ -398,12 +424,12 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
                 </div>
 
                 <div>
-                    <label className="block text-sm font-bold text-slate-500 mb-3 uppercase tracking-wider">{t.energy}</label>
+                    <label className="block text-sm font-bold text-slate-500 mb-3 uppercase tracking-wider">{t('energy')}</label>
                     <div className="flex gap-2">
                     {[
-                        { id: "low", label: t.low, icon: Battery, activeClass: "bg-emerald-100 border-emerald-400 text-emerald-800 ring-2 ring-emerald-200" },
-                        { id: "medium", label: t.med, icon: BatteryMedium, activeClass: "bg-amber-100 border-amber-400 text-amber-800 ring-2 ring-amber-200" },
-                        { id: "high", label: t.high, icon: BatteryFull, activeClass: "bg-rose-100 border-rose-400 text-rose-800 ring-2 ring-rose-200" }
+                        { id: "low", label: t('low'), icon: Battery, activeClass: "bg-emerald-100 border-emerald-400 text-emerald-800 ring-2 ring-emerald-200" },
+                        { id: "medium", label: t('med'), icon: BatteryMedium, activeClass: "bg-amber-100 border-amber-400 text-amber-800 ring-2 ring-amber-200" },
+                        { id: "high", label: t('high'), icon: BatteryFull, activeClass: "bg-rose-100 border-rose-400 text-rose-800 ring-2 ring-rose-200" }
                     ].map((opt) => (
                         <button key={opt.id} type="button" onClick={() => setFormData({...formData, energy: opt.id})} className={cn("flex-1 py-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all", formData.energy === opt.id ? opt.activeClass : "bg-white border-slate-200 text-slate-400 hover:bg-slate-50")}>
                         <opt.icon size={20} />
@@ -414,8 +440,8 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
                 </div>
 
                 <div className="space-y-3 pt-4">
-                    <button type="submit" className="w-full bg-slate-900 text-white font-bold text-lg py-4 rounded-xl hover:bg-slate-800 transition-transform active:scale-[0.98] flex items-center justify-center gap-2 shadow-xl shadow-slate-900/10"><Plus size={20} /> {t.addBucket}</button>
-                    <button type="button" onClick={(e) => handleAdd(e, true)} className="w-full bg-slate-100 text-slate-500 font-bold text-lg py-3 rounded-xl hover:bg-slate-200 hover:text-slate-700 transition-colors flex items-center justify-center gap-2"><Archive size={20} /> {t.moveSomeday}</button>
+                    <button type="submit" className="w-full bg-slate-900 text-white font-bold text-lg py-4 rounded-xl hover:bg-slate-800 transition-transform active:scale-[0.98] flex items-center justify-center gap-2 shadow-xl shadow-slate-900/10"><Plus size={20} /> {t('addBucket')}</button>
+                    <button type="button" onClick={(e) => handleAdd(e, true)} className="w-full bg-slate-100 text-slate-500 font-bold text-lg py-3 rounded-xl hover:bg-slate-200 hover:text-slate-700 transition-colors flex items-center justify-center gap-2"><Archive size={20} /> {t('moveSomeday')}</button>
                 </div>
             </form>
        </div>
@@ -451,10 +477,10 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
 
         <div className="fixed bottom-6 right-6 flex gap-3 z-50">
             <button onClick={() => setFocusMode({ isOpen: true, mode: "tired" })} className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-6 py-3 rounded-full font-bold shadow-lg flex items-center gap-2 transition-transform hover:-translate-y-1">
-                <Battery size={20} /> {t.imTired}
+                <Battery size={20} /> {t('imTired')}
             </button>
             <button onClick={() => setFocusMode({ isOpen: true, mode: "ready" })} className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-full font-bold shadow-xl flex items-center gap-2 transition-transform hover:-translate-y-1">
-                <Zap size={20} /> {t.imReady}
+                <Zap size={20} /> {t('imReady')}
             </button>
         </div>
         
@@ -463,8 +489,8 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
   );
 }
 
-// --- PROJECTS (With Floating Add Button) ---
-function ProjectsListView({ tasks, onSelectProject, t }) {
+function ProjectsListView({ tasks, onSelectProject }) {
+    const { t } = useTranslation();
     const projects = useMemo(() => {
         const map = {};
         tasks.forEach(t => {
@@ -477,7 +503,7 @@ function ProjectsListView({ tasks, onSelectProject, t }) {
     }, [tasks]);
 
     const handleCreate = () => {
-        const name = prompt(t.projName + ":");
+        const name = prompt(t('projName') + ":");
         if (name && name.trim()) {
             onSelectProject(name.trim());
         }
@@ -506,7 +532,6 @@ function ProjectsListView({ tasks, onSelectProject, t }) {
             </div>
             {projects.length === 0 && <div className="text-center py-10 text-slate-400">No projects yet.</div>}
             
-            {/* FLOATING ACTION BUTTON */}
             <button onClick={handleCreate} className="fixed bottom-8 right-8 w-16 h-16 bg-indigo-600 rounded-full text-white shadow-2xl flex items-center justify-center hover:bg-indigo-700 hover:scale-110 transition-all z-50">
                 <Plus size={32} strokeWidth={3} />
             </button>
@@ -514,8 +539,8 @@ function ProjectsListView({ tasks, onSelectProject, t }) {
     )
 }
 
-// --- AGENDA (Separated Today vs Other) ---
-function AgendaView({ user, t }) {
+function AgendaView({ user }) {
+    const { t } = useTranslation();
     const [items, setItems] = useState([]);
     const [newItem, setNewItem] = useState({ time: "", content: "", date: new Date().toISOString().split('T')[0] });
 
@@ -541,7 +566,6 @@ function AgendaView({ user, t }) {
         setItems(items.filter(i => i.id !== id));
     };
 
-    // Logic to separate items
     const todayStr = new Date().toISOString().split('T')[0];
     const todayItems = items.filter(i => i.date === todayStr).sort((a,b) => (a.time_slot||"").localeCompare(b.time_slot||""));
     const otherItems = items.filter(i => i.date !== todayStr).sort((a,b) => (a.date||"").localeCompare(b.date||""));
@@ -579,14 +603,14 @@ function AgendaView({ user, t }) {
 
             {todayItems.length > 0 && (
                 <div className="mb-8">
-                    <h3 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-emerald-500"/> {t.today}</h3>
+                    <h3 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-emerald-500"/> {t('today')}</h3>
                     <AgendaList list={todayItems} />
                 </div>
             )}
 
             {otherItems.length > 0 && (
                 <div>
-                     <h3 className="text-lg font-black text-slate-400 mb-4">{t.upcoming}</h3>
+                     <h3 className="text-lg font-black text-slate-400 mb-4">{t('upcoming')}</h3>
                      <AgendaList list={otherItems} />
                 </div>
             )}
@@ -594,7 +618,6 @@ function AgendaView({ user, t }) {
     )
 }
 
-// --- TASK CARD (UNCHANGED) ---
 function TaskCard({ task, onDelete, onUpdate, onProjectClick }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState(task);
