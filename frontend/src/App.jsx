@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import axios from "axios";
 import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
@@ -6,7 +6,7 @@ import {
   Battery, BatteryFull, BatteryMedium, 
   Zap, Plus, X, CheckCircle2, Flame, Loader2, Trash2, Pencil, Save, Calendar, Archive,
   Clock, LogOut, LayoutGrid, Mail, ArrowLeft, XCircle, Check, ChevronDown, ChevronUp,
-  Layout, FolderKanban, CalendarDays, Globe, Menu
+  Layout, FolderKanban, CalendarDays, Menu, Globe, ChevronLeft, ChevronRight 
 } from "lucide-react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -28,7 +28,7 @@ import LanguageDetector from "i18next-browser-languagedetector";
 const API_URL = "https://focus-mate-final-v3.onrender.com"; 
 const cn = (...inputs) => twMerge(clsx(inputs));
 
-// --- I18N CONFIGURATION (4 LANGUAGES) ---
+// --- I18N CONFIGURATION ---
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
@@ -57,7 +57,8 @@ i18n
           low: "LOW", med: "MED", high: "HIGH",
           imTired: "I'm Tired",
           imReady: "I'm Ready",
-          createProject: "Create New Project"
+          createProject: "Create New Project",
+          weekStart: "Week Start" 
         }
       },
       es: {
@@ -83,7 +84,8 @@ i18n
           low: "BAJA", med: "MEDIA", high: "ALTA",
           imTired: "Estoy Cansado",
           imReady: "Estoy Listo",
-          createProject: "Crear Proyecto"
+          createProject: "Crear Proyecto",
+          weekStart: "Inicio de semana"
         }
       },
       fr: {
@@ -109,14 +111,16 @@ i18n
           low: "FAIBLE", med: "MOY", high: "HAUTE",
           imTired: "Je suis fatigué",
           imReady: "Je suis prêt",
-          createProject: "Créer un projet"
+          createProject: "Créer un projet",
+          weekStart: "Début de semaine"
+         
         }
       },
       ar: {
         translation: {
-          dashboard: "لوحة التحكم",
+          dashboard: "لوحة القيادة",
           projects: "المشاريع",
-          agenda: "الأجندة",
+          agenda: "جدول الأعمال",
           brainDump: "تفريغ الذهن",
           whatToDo: "ما الذي يجب القيام به؟",
           projName: "اسم المشروع (اختياري)",
@@ -126,7 +130,7 @@ i18n
           urgent: "عاجل؟",
           energy: "الطاقة المطلوبة",
           addBucket: "إضافة إلى القائمة",
-          moveSomeday: "قد أفعله في يوم ما",
+          moveSomeday: "نقل إلى يوم ما",
           addToAgenda: "إضافة إلى الجدول؟",
           today: "اليوم",
           upcoming: "القادمة / السابقة",
@@ -135,7 +139,8 @@ i18n
           low: "منخفضة", med: "متوسطة", high: "عالية",
           imTired: "أنا متعب",
           imReady: "أنا مستعد",
-          createProject: "إنشاء مشروع جديد"
+          createProject: "إنشاء مشروع جديد",
+           weekStart: "بداية الأسبوع"
         }
       }
     },
@@ -143,7 +148,6 @@ i18n
     interpolation: { escapeValue: false }
   });
 
-// ------------------------------------------------------------------
 const firebaseConfig = {
   apiKey: "AIzaSyDuPEPhMgblorhwHjPMV47TTJWWxOefPdU",
   authDomain: "focus-mate-cb99f.firebaseapp.com",
@@ -152,7 +156,6 @@ const firebaseConfig = {
   messagingSenderId: "174603807809",
   appId: "1:174603807809:web:52b7ba205b56e277b5eac0"
 };
-// ------------------------------------------------------------------
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -192,7 +195,7 @@ export default function App() {
         <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-xl border border-slate-100">
           <div className="text-center mb-8">
             <div className="inline-block bg-indigo-50 p-4 rounded-2xl mb-4"><LayoutGrid className="w-10 h-10 text-indigo-600" /></div>
-            <h1 className="text-3xl font-black text-slate-900 mb-2"><span className="text-indigo-500">ADHD </span>Focus Mate<span className="text-indigo-500">.</span></h1>
+            <h1 className="text-3xl font-black text-slate-900 mb-2"><span className="text-indigo-500">ADHD </span>Focus Mate</h1>
             <p className="text-slate-500">Sign in to organize your brain.</p>
           </div>
           <div className="space-y-3 mb-6">
@@ -226,18 +229,16 @@ export default function App() {
   return <MainLayout user={user} onLogout={() => signOut(auth)} />;
 }
 
-// --- MAIN LAYOUT (SIDEBAR + CONTENT) ---
-// --- MAIN LAYOUT (RESPONSIVE SIDEBAR + CONTENT) ---
+// --- MAIN LAYOUT (RESPONSIVE + FIXED NAVIGATION + RTL SIDEBAR) ---
 function MainLayout({ user, onLogout }) {
   const [activeTab, setActiveTab] = useState("dashboard"); 
   const [selectedProject, setSelectedProject] = useState(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // NEW: Sidebar State
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); 
   const { t, i18n } = useTranslation();
   const [tasks, setTasks] = useState([]);
   
   useEffect(() => { refreshTasks(); }, [user.uid]);
 
-  // AUTOMATIC RTL HANDLING FOR ARABIC
   useEffect(() => {
     document.dir = i18n.language === 'ar' ? 'rtl' : 'ltr';
   }, [i18n.language]);
@@ -251,21 +252,19 @@ function MainLayout({ user, onLogout }) {
   const goToProject = (projectName) => {
     setSelectedProject(projectName);
     setActiveTab("dashboard"); 
-    setIsSidebarOpen(false); // Close sidebar on mobile when navigating
+    setIsSidebarOpen(false); 
+  };
+
+  const handleBack = () => {
+    setSelectedProject(null);
+    setActiveTab("projects"); 
   };
 
   return (
-    <div className="flex h-[100dvh] w-full bg-slate-50 overflow-hidden font-sans">
+    <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
       
-      {/* MOBILE OVERLAY (Click outside to close) */}
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 md:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
+      {isSidebarOpen && <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 md:hidden" onClick={() => setIsSidebarOpen(false)} />}
 
-      {/* SIDEBAR (Collapsible on Mobile, Fixed on Desktop) */}
       <div className={cn(
           "fixed inset-y-0 start-0 z-40 w-64 bg-white border-e border-slate-200 flex flex-col justify-between transition-transform duration-300 ease-in-out md:relative md:translate-x-0 shadow-2xl md:shadow-none",
           isSidebarOpen ? "translate-x-0" : "-translate-x-full rtl:translate-x-full rtl:md:translate-x-0"
@@ -273,22 +272,10 @@ function MainLayout({ user, onLogout }) {
         <div>
           <div className="p-6 flex items-center justify-between">
              <div className="flex items-center gap-3">
-                {/* Logo */}
-                <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-black shrink-0">FM</div>
-                
-                {/* Text Column */}
-                <div className="flex flex-col">
-                    <span className="font-black text-slate-800 text-lg leading-tight">Focus Mate</span>
-                    <span className="text-xs font-bold text-slate-400">
-                        {t('welcome')}, {user.displayName || user.email.split('@')[0]}
-                    </span>
-                </div>
+                <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-black">FM</div>
+                <span className="font-black text-slate-800 text-lg">Focus Mate</span>
              </div>
-
-             {/* Close Button (Mobile Only) */}
-             <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-400 hover:text-slate-600">
-               <X size={20} />
-             </button>
+             <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-400 hover:text-slate-600"><X size={20} /></button>
           </div>
           
           <nav className="px-3 space-y-1 mt-2">
@@ -297,58 +284,35 @@ function MainLayout({ user, onLogout }) {
             <SidebarItem icon={CalendarDays} label={t('agenda')} active={activeTab === "agenda"} onClick={() => { setActiveTab("agenda"); setSelectedProject(null); setIsSidebarOpen(false); }} />
           </nav>
 
-          {/* LANGUAGE SWITCHER (DROPDOWN) */}
           <div className="px-6 mt-8">
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
-              <Globe size={12}/> Language
-            </div>
+            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2"><Globe size={12}/> Language</div>
             <div className="relative group">
-              <select
-                value={i18n.language}
-                onChange={(e) => i18n.changeLanguage(e.target.value)}
-                className="w-full appearance-none bg-slate-100 border border-transparent hover:border-slate-200 text-slate-700 font-bold text-sm rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all cursor-pointer"
-              >
+              <select value={i18n.language} onChange={(e) => i18n.changeLanguage(e.target.value)} className="w-full appearance-none bg-slate-100 border border-transparent hover:border-slate-200 text-slate-700 font-bold text-sm rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all cursor-pointer">
                 <option value="en">English (EN)</option>
                 <option value="fr">Français (FR)</option>
                 <option value="es">Español (ES)</option>
                 <option value="ar">العربية (AR)</option>
               </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400 group-hover:text-indigo-600 transition-colors">
-                <ChevronDown size={16} />
-              </div>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400 group-hover:text-indigo-600 transition-colors"><ChevronDown size={16} /></div>
             </div>
           </div>
         </div>
 
         <div className="p-4 border-t border-slate-100 bg-slate-50/50">
           <div className="flex items-center gap-3 px-2 mb-4">
-             <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center font-bold text-indigo-600 text-xs">
-                {user.email[0].toUpperCase()}
-             </div>
-             <div className="overflow-hidden">
-                <p className="text-xs text-slate-500 font-medium">{t('welcome')}</p>
-                <p className="text-xs font-bold text-slate-900 truncate w-32">{user.email}</p>
-             </div>
+             <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center font-bold text-indigo-600 text-xs">{user.email[0].toUpperCase()}</div>
+             <div className="overflow-hidden"><p className="text-xs text-slate-500 font-medium">{t('welcome')}</p><p className="text-xs font-bold text-slate-900 truncate w-32">{user.email}</p></div>
           </div>
-          <button onClick={onLogout} className="w-full flex items-center gap-3 px-2 py-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
-            <LogOut size={18} />
-            <span className="font-bold text-sm">{t('logout')}</span>
-          </button>
+          <button onClick={onLogout} className="w-full flex items-center gap-3 px-2 py-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"><LogOut size={18} /><span className="font-bold text-sm">{t('logout')}</span></button>
         </div>
       </div>
 
-      {/* CONTENT AREA */}
-      <div className="flex-1 flex flex-col h-full min-w-0 bg-slate-50 relative">
-         
-         {/* MOBILE HEADER (HAMBURGER BUTTON) */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden relative bg-slate-50">
          <div className="md:hidden p-4 bg-white border-b border-slate-200 flex items-center gap-3 shrink-0">
-            <button onClick={() => setIsSidebarOpen(true)} className="p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-lg">
-                <Menu size={24} />
-            </button>
+            <button onClick={() => setIsSidebarOpen(true)} className="p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-lg"><Menu size={24} /></button>
             <span className="font-black text-slate-800 text-lg">Focus Mate</span>
          </div>
-
-         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 md:p-6 pb-48">
+         <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-32">
             <div className="max-w-4xl mx-auto">
                 {activeTab === "dashboard" && (
                     <DashboardView 
@@ -356,14 +320,12 @@ function MainLayout({ user, onLogout }) {
                         tasks={tasks} 
                         refreshTasks={refreshTasks} 
                         filterProject={selectedProject} 
-                        setFilterProject={setSelectedProject}
+                        setFilterProject={setSelectedProject} 
+                        onBack={handleBack} 
                     />
                 )}
                 {activeTab === "projects" && (
-                    <ProjectsListView 
-                        tasks={tasks} 
-                        onSelectProject={goToProject}
-                    />
+                    <ProjectsListView tasks={tasks} onSelectProject={goToProject} />
                 )}
                 {activeTab === "agenda" && (
                     <AgendaView user={user} />
@@ -391,8 +353,9 @@ function SidebarItem({ icon: Icon, label, active, onClick }) {
     )
 }
 
-function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProject }) {
-  const { t, i18n } = useTranslation(); // Added i18n for RTL checks
+// --- DASHBOARD VIEW (With FIXED GRADIENT FOOTER & STRICT SORTING) ---
+function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProject, onBack }) {
+  const { t, i18n } = useTranslation();
   const [formData, setFormData] = useState({ 
     content: "", project: "", energy: "medium", isUrgent: false, 
     dueDate: "", step: "", addToAgenda: false 
@@ -404,11 +367,9 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
     if (!formData.content.trim()) return;
     const finalProject = filterProject || formData.project;
     
-    // Create Task
     const taskPayload = { ...formData, project: finalProject, isSomeday: asSomeday, step: formData.step ? parseInt(formData.step) : null, subtasks: [] };
     await axios.post(`${API_URL}/tasks`, taskPayload, { headers: { "x-user-id": user.uid } });
 
-    // Add to Agenda?
     if (formData.addToAgenda && formData.dueDate) {
          const agendaPayload = { content: formData.content, time_slot: "", date: formData.dueDate, isCompleted: false };
          await axios.post(`${API_URL}/agenda`, agendaPayload, { headers: { "x-user-id": user.uid } });
@@ -428,13 +389,16 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
 
   const visibleTasks = useMemo(() => {
     let pool = tasks.filter((t) => !t.isCompleted && !t.isSomeday);
-    if (filterProject) return pool.filter(t => t.project === filterProject).sort((a, b) => (a.step || 999) - (b.step || 999));
+    if (filterProject) {
+      // STRICT SORTING: Numerical Step inside projects
+      return pool.filter(t => t.project === filterProject).sort((a, b) => (Number(a.step) || 999) - (Number(b.step) || 999));
+    }
     return pool.sort((a, b) => {
         if (a.dueDate && !b.dueDate) return -1; 
         if (!a.dueDate && b.dueDate) return 1;
         if (a.isUrgent && !b.isUrgent) return -1;
         if (!a.isUrgent && b.isUrgent) return 1;
-        if (a.project === b.project) return (a.step || 999) - (b.step || 999);
+        if (a.project === b.project) return (Number(a.step) || 999) - (Number(b.step) || 999);
         return 0;
     });
   }, [tasks, filterProject]);
@@ -453,7 +417,7 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
     <div>
        {filterProject && (
          <div className="mb-6 animate-in slide-in-from-right-4">
-             <button onClick={() => setFilterProject(null)} className="flex items-center gap-2 text-slate-400 hover:text-slate-800 font-bold mb-4 text-sm"><ArrowLeft size={16} /> Back</button>
+             <button onClick={onBack} className="flex items-center gap-2 text-slate-400 hover:text-slate-800 font-bold mb-4 text-sm"><ArrowLeft size={16} /> Back</button>
              <div className="bg-indigo-600 rounded-3xl p-8 text-white shadow-lg relative overflow-hidden">
                 <h1 className="text-3xl font-black mb-4">{filterProject}</h1>
                 <div className="bg-black/20 h-3 rounded-full overflow-hidden mb-2">
@@ -473,34 +437,17 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
             
             <form onSubmit={(e) => handleAdd(e, false)} className="space-y-6">
                 <div className="relative">
-                    <input 
-                        className="w-full p-4 pr-12 text-lg border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400" 
-                        placeholder={t('whatToDo')} 
-                        value={formData.content} 
-                        onChange={(e) => setFormData({...formData, content: e.target.value})} 
-                        autoFocus 
-                    />
+                    <input className="w-full p-4 pr-12 text-lg border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400" placeholder={t('whatToDo')} value={formData.content} onChange={(e) => setFormData({...formData, content: e.target.value})} autoFocus />
                     {formData.content && <ClearButton onClick={() => setFormData({...formData, content: ""})} />}
                 </div>
 
                 <div className="flex flex-col md:flex-row gap-4">
                     <div className="relative flex-[2]">
-                        <input 
-                            className="w-full p-4 pr-12 text-lg border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400" 
-                            placeholder={t('projName')} 
-                            value={formData.project} 
-                            onChange={(e) => setFormData({...formData, project: e.target.value})} 
-                        />
+                        <input className="w-full p-4 pr-12 text-lg border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400" placeholder={t('projName')} value={formData.project} onChange={(e) => setFormData({...formData, project: e.target.value})} />
                         {formData.project && <ClearButton onClick={() => setFormData({...formData, project: ""})} />}
                     </div>
                     <div className="relative flex-1">
-                        <input 
-                            type="number" min="1" 
-                            className="w-full p-4 pr-12 text-lg border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400" 
-                            placeholder={t('step')} 
-                            value={formData.step} 
-                            onChange={(e) => setFormData({...formData, step: e.target.value})} 
-                        />
+                        <input type="number" min="1" className="w-full p-4 pr-12 text-lg border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400" placeholder={t('step')} value={formData.step} onChange={(e) => setFormData({...formData, step: e.target.value})} />
                         {formData.step && <ClearButton onClick={() => setFormData({...formData, step: ""})} />}
                     </div>
                 </div>
@@ -512,9 +459,7 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
                             <Calendar className="text-slate-400 ml-2" />
                             <input type="date" className="w-full outline-none text-slate-600 font-medium bg-transparent uppercase" value={formData.dueDate} onChange={(e) => setFormData({...formData, dueDate: e.target.value})} />
                             {formData.dueDate && (
-                                <button type="button" onClick={() => setFormData({...formData, dueDate: ""})} className="absolute right-2 p-2 hover:bg-rose-50 hover:text-rose-500 rounded-full text-slate-300 transition-colors">
-                                    <X size={18} />
-                                </button>
+                                <button type="button" onClick={() => setFormData({...formData, dueDate: ""})} className="absolute right-2 p-2 hover:bg-rose-50 hover:text-rose-500 rounded-full text-slate-300 transition-colors"><X size={18} /></button>
                             )}
                         </div>
                          {formData.dueDate && (
@@ -541,11 +486,7 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
                 <div>
                     <label className="block text-sm font-bold text-slate-500 mb-3 uppercase tracking-wider">{t('energy')}</label>
                     <div className="flex gap-2">
-                    {[
-                        { id: "low", label: t('low'), icon: Battery, activeClass: "bg-emerald-100 border-emerald-400 text-emerald-800 ring-2 ring-emerald-200" },
-                        { id: "medium", label: t('med'), icon: BatteryMedium, activeClass: "bg-amber-100 border-amber-400 text-amber-800 ring-2 ring-amber-200" },
-                        { id: "high", label: t('high'), icon: BatteryFull, activeClass: "bg-rose-100 border-rose-400 text-rose-800 ring-2 ring-rose-200" }
-                    ].map((opt) => (
+                    {[{ id: "low", label: t('low'), icon: Battery, activeClass: "bg-emerald-100 border-emerald-400 text-emerald-800 ring-2 ring-emerald-200" }, { id: "medium", label: t('med'), icon: BatteryMedium, activeClass: "bg-amber-100 border-amber-400 text-amber-800 ring-2 ring-amber-200" }, { id: "high", label: t('high'), icon: BatteryFull, activeClass: "bg-rose-100 border-rose-400 text-rose-800 ring-2 ring-rose-200" }].map((opt) => (
                         <button key={opt.id} type="button" onClick={() => setFormData({...formData, energy: opt.id})} className={cn("flex-1 py-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all", formData.energy === opt.id ? opt.activeClass : "bg-white border-slate-200 text-slate-400 hover:bg-slate-50")}>
                         <opt.icon size={20} />
                         <span className="text-[10px] font-bold tracking-wider">{opt.label}</span>
@@ -590,33 +531,40 @@ function DashboardView({ user, tasks, refreshTasks, filterProject, setFilterProj
           </div>
        )}
 
-         {/* SPACER DIV: This forces the scrollbar to go deeper */}
-         <div className="h-48 w-full"></div>
+        {/* SPACER DIV FOR FOOTER */}
+        <div className="h-48 w-full"></div>
 
-         {/* FIXED FOOTER WITH CORRECT POSITIONING */}
-         <div className={cn(
-             "fixed bottom-0 left-0 right-0 z-20 p-6 bg-gradient-to-t from-white via-white/95 to-transparent pt-12 pointer-events-none transition-all duration-300",
-             i18n.language === 'ar' ? "md:right-64 md:left-0" : "md:left-64 md:right-0"
-         )}>
+        {/* FIXED FOOTER WITH GRADIENT & RTL SUPPORT */}
+        <div className={cn(
+            "fixed bottom-0 left-0 right-0 z-20 p-6 bg-gradient-to-t from-white via-white/95 to-transparent pt-12 pointer-events-none transition-all duration-300",
+            i18n.language === 'ar' ? "md:right-64 md:left-0" : "md:left-64 md:right-0"
+        )}>
             <div className="max-w-3xl mx-auto flex gap-4 pointer-events-auto">
-            <button onClick={() => setFocusMode({ isOpen: true, mode: "tired" })} className="flex-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 py-4 rounded-2xl flex flex-col items-center gap-1 transition-transform hover:-translate-y-1 shadow-lg shadow-emerald-900/10">
-                <div className="flex items-center gap-2 font-bold text-lg"><Battery className="w-5 h-5" /> {t('imTired')}</div>
-                <span className="text-xs opacity-75 font-medium">Low Energy Mode</span>
-            </button>
-            <button onClick={() => setFocusMode({ isOpen: true, mode: "ready" })} className="flex-1 bg-slate-900 hover:bg-slate-800 text-white py-4 rounded-2xl flex flex-col items-center gap-1 transition-transform hover:-translate-y-1 shadow-xl shadow-slate-900/20">
-                <div className="flex items-center gap-2 font-bold text-lg"><Zap className="w-5 h-5" /> {t('imReady')}</div>
-                <span className="text-xs text-slate-400 font-medium">Normal / High Energy</span>
-            </button>
+                <button onClick={() => setFocusMode({ isOpen: true, mode: "tired" })} className="flex-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 py-4 rounded-2xl flex flex-col items-center gap-1 transition-transform hover:-translate-y-1 shadow-lg shadow-emerald-900/10">
+                    <div className="flex items-center gap-2 font-bold text-lg"><Battery className="w-5 h-5" /> {t('imTired')}</div>
+                    <span className="text-xs opacity-75 font-medium">Low Energy Mode</span>
+                </button>
+                <button onClick={() => setFocusMode({ isOpen: true, mode: "ready" })} className="flex-1 bg-slate-900 hover:bg-slate-800 text-white py-4 rounded-2xl flex flex-col items-center gap-1 transition-transform hover:-translate-y-1 shadow-xl shadow-slate-900/20">
+                    <div className="flex items-center gap-2 font-bold text-lg"><Zap className="w-5 h-5" /> {t('imReady')}</div>
+                    <span className="text-xs text-slate-400 font-medium">Normal / High Energy</span>
+                </button>
             </div>
         </div>
         
-        <FocusOverlay isOpen={focusMode.isOpen} onClose={() => setFocusMode({...focusMode, isOpen: false})} tasks={tasks} mode={focusMode.mode} onComplete={(t) => handleUpdate({...t, isCompleted: true})} />
+        <FocusOverlay 
+            isOpen={focusMode.isOpen} 
+            onClose={() => setFocusMode({...focusMode, isOpen: false})} 
+            tasks={filterProject ? tasks.filter(t => t.project === filterProject) : tasks} 
+            mode={focusMode.mode} 
+            onComplete={(t) => handleUpdate({...t, isCompleted: true})} 
+        />
     </div>
   );
 }
-// --- PROJECTS VIEW (RTL FIXED) ---
+
+// --- PROJECTS VIEW (RTL Button Fix) ---
 function ProjectsListView({ tasks, onSelectProject }) {
-    const { t, i18n } = useTranslation(); // Need i18n for position check
+    const { t, i18n } = useTranslation();
     const projects = useMemo(() => {
         const map = {};
         tasks.forEach(t => {
@@ -660,27 +608,35 @@ function ProjectsListView({ tasks, onSelectProject }) {
             </div>
             {projects.length === 0 && <div className="text-center py-10 text-slate-400">No projects yet.</div>}
             
-            {/* RTL FIXED BUTTON (Using JS Logic for strict positioning) */}
-            <button 
-                onClick={handleCreate} 
-                className={cn(
-                    "fixed bottom-8 w-16 h-16 bg-indigo-600 rounded-full text-white shadow-2xl flex items-center justify-center hover:bg-indigo-700 hover:scale-110 transition-all z-50",
-                    isArabic ? "left-8" : "right-8"
-                )}
-            >
+            {/* RTL FIXED BUTTON */}
+            <button onClick={handleCreate} className={cn("fixed bottom-8 w-16 h-16 bg-indigo-600 rounded-full text-white shadow-2xl flex items-center justify-center hover:bg-indigo-700 hover:scale-110 transition-all z-50", isArabic ? "left-8" : "right-8")}>
                 <Plus size={32} strokeWidth={3} />
             </button>
         </div>
     )
 }
 
-// --- AGENDA VIEW (AM/PM Format + Date/Time Sort) ---
+// --- AGENDA VIEW (Time Format + Editing + Sections) ---
+// --- AGENDA VIEW (Calendar Style: Grouped & Minimalist) ---
+// --- AGENDA VIEW (Navigable Calendar + Big Actions) ---
+// --- AGENDA VIEW (Scrollable Timeline + Auto-Scroll to Today) ---
+// --- AGENDA VIEW (Fixed Header via Sticky + Auto-Scroll) ---
+// --- AGENDA VIEW (Solid Opaque Header + Clean Scroll) ---
 function AgendaView({ user }) {
-    const { t, i18n } = useTranslation(); 
+    const { t, i18n } = useTranslation();
     const [items, setItems] = useState([]);
-    const [newItem, setNewItem] = useState({ time: "", content: "", date: new Date().toISOString().split('T')[0] });
     
-    // Editing State
+    // REFS
+    const todaySectionRef = useRef(null);
+    
+    // CONFIG
+    const [weekStartDay, setWeekStartDay] = useState("Sun"); 
+    
+    // STATE
+    const [currentStartDate, setCurrentStartDate] = useState(new Date());
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [newItemContent, setNewItemContent] = useState("");
+    const [newItemTime, setNewItemTime] = useState("");
     const [editingId, setEditingId] = useState(null);
     const [editForm, setEditForm] = useState({ content: "", time: "" });
 
@@ -688,11 +644,61 @@ function AgendaView({ user }) {
         axios.get(`${API_URL}/agenda`, { headers: { "x-user-id": user.uid } }).then(res => setItems(res.data));
     }, [user.uid]);
 
+    // Auto-scroll to Today
+    useEffect(() => {
+        if (todaySectionRef.current) {
+            setTimeout(() => {
+                todaySectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+            }, 500);
+        }
+    }, [items]);
+
+    useEffect(() => {
+        setCurrentStartDate(prev => getAlignedWeekStart(prev, weekStartDay));
+    }, [weekStartDay]);
+
+    // --- HELPERS ---
+    const getAlignedWeekStart = (date, startDay) => {
+        const d = new Date(date);
+        const currentDay = d.getDay(); 
+        const target = startDay === 'Sun' ? 0 : (startDay === 'Mon' ? 1 : 6);
+        let diff = currentDay - target;
+        if (diff < 0) diff += 7; 
+        d.setDate(d.getDate() - diff);
+        return d;
+    };
+
+    const changeWeek = (days) => {
+        const newDate = new Date(currentStartDate);
+        newDate.setDate(newDate.getDate() + days);
+        setCurrentStartDate(newDate);
+    };
+
+    const getWeekDays = () => {
+        const days = [];
+        const start = getAlignedWeekStart(currentStartDate, weekStartDay);
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(start);
+            d.setDate(d.getDate() + i);
+            days.push({
+                full: d.toISOString().split('T')[0],
+                day: d.getDate(),
+                name: d.toLocaleDateString(i18n.language, { weekday: 'narrow' })
+            });
+        }
+        return days;
+    };
+
+    // --- ACTIONS ---
     const handleAdd = (e) => {
         e.preventDefault();
-        if(!newItem.content) return;
-        const payload = { content: newItem.content, time_slot: newItem.time, date: newItem.date, isCompleted: false };
-        axios.post(`${API_URL}/agenda`, payload, { headers: { "x-user-id": user.uid } }).then(res => { setItems([...items, res.data]); setNewItem({ ...newItem, content: "", time: "" }); });
+        if(!newItemContent) return;
+        const payload = { content: newItemContent, time_slot: newItemTime, date: selectedDate, isCompleted: false };
+        axios.post(`${API_URL}/agenda`, payload, { headers: { "x-user-id": user.uid } }).then(res => { 
+            setItems([...items, res.data]); 
+            setNewItemContent(""); 
+            setNewItemTime(""); 
+        });
     };
 
     const toggleItem = (item) => {
@@ -721,148 +727,260 @@ function AgendaView({ user }) {
         setEditingId(null);
     };
 
-    // Helper: Get Day Name
-    const getDayName = (dateStr) => {
+    // --- FORMATTERS ---
+    const getGroupLabel = (dateStr) => {
         const date = new Date(dateStr);
-        return date.toLocaleDateString(i18n.language, { weekday: 'short' });
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        const dStr = date.toISOString().split('T')[0];
+        const tStr = today.toISOString().split('T')[0];
+        const tomStr = tomorrow.toISOString().split('T')[0];
+
+        if (dStr === tStr) return t('today');
+        if (dStr === tomStr) return i18n.language === 'ar' ? "غداً" : (i18n.language === 'es' ? "Mañana" : (i18n.language === 'fr' ? "Demain" : "Tomorrow")); 
+        
+        return date.toLocaleDateString(i18n.language, { weekday: 'long' }); 
     };
 
-    // Helper: Convert 24h (14:30) to AM/PM (2:30 PM)
-    const formatToAmPm = (timeStr) => {
+    const formatTime = (timeStr) => {
         if (!timeStr) return "";
-        // Check if it's already not in HH:mm format (legacy data)
         if (!timeStr.includes(":")) return timeStr;
-        
         const [hours, minutes] = timeStr.split(':');
         const h = parseInt(hours, 10);
+        if (isNaN(h)) return timeStr;
         const suffix = h >= 12 ? 'PM' : 'AM';
         const hour12 = h % 12 || 12;
         return `${hour12}:${minutes} ${suffix}`;
     };
 
-    const todayStr = new Date().toISOString().split('T')[0];
-
-    // SORTING: Today items by time
-    const todayItems = items.filter(i => i.date === todayStr).sort((a,b) => (a.time_slot||"").localeCompare(b.time_slot||""));
-    
-    // SORTING: Other items by Date THEN Time
-    const otherItems = items.filter(i => i.date !== todayStr).sort((a,b) => {
-        const dateComparison = (a.date || "").localeCompare(b.date || "");
-        if (dateComparison !== 0) return dateComparison;
+    const sortedItems = [...items].sort((a, b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
         return (a.time_slot || "").localeCompare(b.time_slot || "");
     });
 
-    const AgendaList = ({ list }) => (
-        <div className="space-y-3">
-            {list.map(item => (
-                <div key={item.id} className="flex items-center gap-4 group">
-                    {/* Left Column: Day, Date, Time */}
-                    <div className="text-right w-24 shrink-0 flex flex-col items-end">
-                        {editingId === item.id ? (
-                            // Edit Time Input (Now type="time" for easy picking)
-                            <input 
-                                type="time"
-                                className="w-full text-right text-xs font-bold p-1 border rounded bg-white" 
-                                value={editForm.time} 
-                                onChange={e => setEditForm({...editForm, time: e.target.value})}
-                            />
-                        ) : (
-                            <>
-                                <div className="text-xs font-black text-indigo-500 uppercase tracking-wider">
-                                    {item.date === todayStr ? t('today') : getDayName(item.date)}
-                                </div>
-                                {item.date !== todayStr && (
-                                    <div className="text-[10px] font-bold text-slate-400">{item.date}</div>
-                                )}
-                                {/* Display Formatted Time */}
-                                <div className="text-xs font-bold text-slate-600">
-                                    {formatToAmPm(item.time_slot)}
-                                </div>
-                            </>
-                        )}
-                    </div>
+    const groupedItems = sortedItems.reduce((groups, item) => {
+        const date = item.date;
+        if (!groups[date]) groups[date] = [];
+        groups[date].push(item);
+        return groups;
+    }, {});
 
-                    {/* Right Column: Task Content */}
-                    <div className={cn("flex-1 bg-white p-4 rounded-xl border border-slate-200 flex items-center gap-3 shadow-sm", item.isCompleted && "opacity-50")}>
-                        {editingId === item.id ? (
-                            <div className="flex-1 flex gap-2">
-                                <input 
-                                    className="flex-1 font-bold text-slate-700 p-1 border rounded outline-none focus:ring-2 focus:ring-indigo-500/20" 
-                                    value={editForm.content} 
-                                    onChange={e => setEditForm({...editForm, content: e.target.value})}
-                                    autoFocus
-                                />
-                                <button onClick={() => saveEdit(item.id)} className="p-1 bg-indigo-100 text-indigo-600 rounded hover:bg-indigo-200"><Check size={16}/></button>
-                                <button onClick={() => setEditingId(null)} className="p-1 text-slate-400 hover:text-slate-600"><X size={16}/></button>
-                            </div>
-                        ) : (
-                            <>
-                                <button onClick={() => toggleItem(item)} className={cn("w-5 h-5 border-2 rounded-full flex items-center justify-center flex-shrink-0", item.isCompleted ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-300")}>
-                                    {item.isCompleted && <Check size={12} />}
-                                </button>
-                                <span className={cn("font-bold text-slate-700", item.isCompleted && "line-through")}>{item.content}</span>
-                            </>
-                        )}
-                    </div>
-                    
-                    <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => startEditing(item)} className="text-slate-300 hover:text-indigo-500"><Pencil size={16} /></button>
-                        <button onClick={() => deleteItem(item.id)} className="text-slate-300 hover:text-rose-500"><Trash2 size={16} /></button>
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
+    const todayStr = new Date().toISOString().split('T')[0];
+
+   const dayLabels = {
+    Sat: { en: "Sat", ar: "سبت", fr: "Sam", es: "Sáb" },
+    Sun: { en: "Sun", ar: "أحد", fr: "Dim", es: "Dom" },
+    Mon: { en: "Mon", ar: "إثنين", fr: "Lun", es: "Lun" }
+};
 
     return (
-        <div className="pb-32">
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mb-8">
-                <form onSubmit={handleAdd} className="flex flex-col md:flex-row gap-2">
-                    {/* Date Input */}
-                    <input 
-                        type="date" 
-                        className="p-3 bg-slate-50 rounded-lg font-bold text-sm text-slate-500" 
-                        value={newItem.date} 
-                        onChange={e => setNewItem({...newItem, date: e.target.value})} 
-                    />
+        <div className="pb-10 relative ">
+            {/* 1. STICKY HEADER (Solid Background, Z-Index 30) */}
+            {/* 'bg-slate-50' ensures opacity so items don't show behind it */}
+          <div className="sticky top-[-30px] z-30 bg-slate-50 pt-7 mb-6 border-b border-slate-200 shadow-sm -mx-4 px-4 -mt-4 md:-mx-6 md:px-6 md:-mt-6 transition-all">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
                     
-                    {/* Time Input (Changed to type="time") */}
-                    <input 
-                        type="time"
-                        className="w-full md:w-32 p-3 bg-slate-50 rounded-lg font-bold text-sm" 
-                        value={newItem.time} 
-                        onChange={e => setNewItem({...newItem, time: e.target.value})} 
-                    />
-                    
-                    {/* Content Input */}
-                    <input 
-                        className="flex-1 p-3 bg-slate-50 rounded-lg font-bold text-sm" 
-                        placeholder="Meeting / Focus Block" 
-                        value={newItem.content} 
-                        onChange={e => setNewItem({...newItem, content: e.target.value})} 
-                    />
-                    
-                    <button type="submit" className="bg-indigo-600 text-white p-3 rounded-lg hover:bg-indigo-700"><Plus size={20}/></button>
-                </form>
+                    <div className="flex items-center justify-between md:justify-start w-full md:w-auto gap-4">
+                        <button onClick={() => changeWeek(-7)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-full transition-colors">{i18n.language === 'ar' ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}</button>
+                        <span className="text-sm font-black text-slate-800 uppercase tracking-widest min-w-[100px] text-center">
+                            {getAlignedWeekStart(currentStartDate, weekStartDay).toLocaleDateString(i18n.language, { month: 'long', year: 'numeric' })}
+                        </span>
+                        <button onClick={() => changeWeek(7)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-full transition-colors">{i18n.language === 'ar' ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}</button>
+                    </div>
+
+                    {/* Removed 'self-end' so it aligns naturally with the start of the container in mobile view */}
+                   <div className="flex items-center gap-1 text-[13px] font-bold bg-white border border-slate-200 p-1 rounded-lg">
+                        <span className="text-slate-400 px-2 uppercase tracking-wide hidden sm:inline">{t('weekStart')}:</span>
+                        {['Sat', 'Sun', 'Mon'].map(d => (
+                            <button 
+                                key={d} 
+                                onClick={() => setWeekStartDay(d)}
+                                className={cn(
+                                    "px-2 py-1 rounded-md transition-all",
+                                    weekStartDay === d ? "bg-indigo-600 text-white shadow-sm" : "text-slate-400 hover:text-slate-600"
+                                )}
+                            >
+                                {dayLabels[d][i18n.language] || dayLabels[d].en}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+               {/* Added flex-wrap and dir="ltr" if you want to FORCE Sun->Sat visual order even in Arabic, 
+    OR keep it standard to let it flip. 
+    Usually, calendars should strictly follow LTR visual order (Sun ... Sat) or RTL (Sat ... Sun). 
+    The safest fix for alignment is this: */}
+<div className="flex justify-center gap-2 md:gap-7 mb-4 flex-wrap md:flex-nowrap" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
+                    {getWeekDays().map((day) => {
+                        const isSelected = day.full === selectedDate;
+                        const isToday = day.full === todayStr;
+                        return (
+                            <button 
+                                key={day.full} 
+                                onClick={() => setSelectedDate(day.full)}
+                                className={cn(
+                                    "flex flex-col items-center justify-center w-20 h-14 rounded-2xl text-Lg font-bold transition-all relative overflow-hidden",
+                                    isSelected ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-105" : "bg-white text-slate-400 hover:bg-slate-100 border border-slate-100"
+                                )}
+                            >
+                                {isToday && !isSelected && <div className="absolute top-1 right-1 w-1.5 h-1.5 bg-emerald-400 rounded-full" />}
+                                <span className={cn("opacity-60 mb-1 uppercase text-[15px]", isSelected && "opacity-100")}>{day.name}</span>
+                                <span className="text-sm">{day.day}</span>
+                            </button>
+                        )
+                    })}
+                </div>
+                
+                <form onSubmit={handleAdd} className="flex gap-2 animate-in fade-in">
+    <div className="relative flex-1">
+        <input 
+            className={cn(
+                "w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-sm",
+                i18n.language === 'ar' ? "pr-10 pl-3" : "pl-10 pr-3"
+            )} 
+            placeholder={`+ ${t('agenda')} (${selectedDate})...`} 
+            value={newItemContent} 
+            onChange={e => setNewItemContent(e.target.value)} 
+        />
+        <div className={cn(
+            "absolute top-1/2 -translate-y-1/2 text-slate-300",
+            i18n.language === 'ar' ? "right-3" : "left-3"
+        )}>
+            <Check size={16} className="border-2 border-slate-300 rounded-full p-0.5 w-4 h-4" />
+        </div>
+    </div>
+    <input type="time" className="w-20 p-3 bg-white border border-slate-200 rounded-xl font-bold text-center outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm text-xs" value={newItemTime} onChange={e => setNewItemTime(e.target.value)} />
+    <button type="submit" className="bg-indigo-600 text-white p-3 rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-transform active:scale-95">
+        <Plus size={20} />
+    </button>
+</form>
             </div>
 
-            {todayItems.length > 0 && (
-                <div className="mb-8">
-                    <h3 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-emerald-500"/> {t('today')}</h3>
-                    <AgendaList list={todayItems} />
-                </div>
-            )}
+            {/* 2. SCROLLABLE TIMELINE */}
 
-            {otherItems.length > 0 && (
-                <div>
-                     <h3 className="text-lg font-black text-slate-400 mb-4">{t('upcoming')}</h3>
-                     <AgendaList list={otherItems} />
-                </div>
-            )}
+              <div className="space-y-8 pt-[440px] pb-10">
+                {Object.keys(groupedItems).length === 0 && (
+                    <div className="text-center py-10 opacity-40">
+                        <div className="text-4xl mb-2">☕️</div>
+                        <p className="font-bold">No plans yet.</p>
+                    </div>
+                )}
+
+                {Object.keys(groupedItems).map(dateKey => {
+                    const isTodayGroup = dateKey === todayStr;
+                    return (
+                        <div 
+                            key={dateKey} 
+                            ref={isTodayGroup ? todaySectionRef : null}
+                            className={cn(
+                                "animate-in slide-in-from-bottom-2", 
+                                isTodayGroup ? "scroll-mt-48" : "opacity-80 hover:opacity-100 transition-opacity" 
+                            )}
+                        >
+                            <h3 className={cn(
+                                "text-lg font-black mb-3 px-2 capitalize flex items-center gap-3",
+                                isTodayGroup ? "text-indigo-600" : "text-slate-700"
+                            )}>
+                                {isTodayGroup && <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-sm shadow-indigo-300"/>}
+                                <span>{getGroupLabel(dateKey)}</span>
+                                <span className="text-sm font-bold text-slate-400 mt-0.5">{dateKey}</span>
+                            </h3>
+
+                            <div className="space-y-2">
+                                {groupedItems[dateKey].map(item => (
+                                    <AgendaItem 
+                                        key={item.id} 
+                                        item={item} 
+                                        editingId={editingId} setEditingId={setEditingId}
+                                        editForm={editForm} setEditForm={setEditForm} 
+                                        saveEdit={saveEdit} 
+                                        toggleItem={toggleItem} 
+                                        deleteItem={deleteItem} 
+                                        formatTime={formatTime} 
+                                        todayStr={todayStr}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
         </div>
     )
 }
+// --- AGENDA ITEM (Bigger & Closer Actions) ---
+const AgendaItem = ({ item, editingId, setEditingId, editForm, setEditForm, saveEdit, toggleItem, deleteItem, formatTime }) => {
+    
+    if (editingId === item.id) {
+        return (
+            <div className="flex items-center gap-2 p-2 bg-white rounded-xl border border-indigo-100 shadow-sm ring-2 ring-indigo-50">
+                <input 
+                    className="flex-1 font-bold text-slate-700 p-2 bg-transparent outline-none" 
+                    value={editForm.content} 
+                    onChange={e => setEditForm({...editForm, content: e.target.value})}
+                    autoFocus
+                />
+                <input 
+                    type="time"
+                    className="w-20 text-xs font-bold p-2 bg-slate-50 rounded outline-none"
+                    value={editForm.time}
+                    onChange={e => setEditForm({...editForm, time: e.target.value})}
+                />
+                <button onClick={() => saveEdit(item.id)} className="p-2 bg-indigo-600 text-white rounded-lg"><Check size={18}/></button>
+            </div>
+        );
+    }
 
+    return (
+        <div className="group flex items-start gap-4 p-2 rounded-xl hover:bg-white/60 transition-colors">
+            {/* 1. Circular Checkbox */}
+            <button 
+                onClick={() => toggleItem(item)} 
+                className={cn(
+                    "mt-1 w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
+                    item.isCompleted 
+                        ? "bg-slate-400 border-slate-400 text-white" 
+                        : "border-slate-300 text-transparent hover:border-indigo-500"
+                )}
+            >
+                <Check size={12} strokeWidth={3} />
+            </button>
+
+            {/* 2. Content & Time */}
+            <div className="flex-1 min-w-0 cursor-pointer" onClick={() => { setEditingId(item.id); setEditForm({ content: item.content, time: item.time_slot }); }}>
+                <div className={cn(
+                    "text-base font-bold text-slate-700 leading-tight break-words",
+                    item.isCompleted && "line-through text-slate-400"
+                )}>
+                    {item.content}
+                </div>
+                {item.time_slot && (
+                    <div className="text-xs font-bold text-slate-400 mt-1 flex items-center gap-1">
+                        {formatTime(item.time_slot)}
+                    </div>
+                )}
+            </div>
+
+            {/* 3. BIGGER & CLOSER ACTIONS (Always visible, right next to text) */}
+            <div className="flex gap-1 self-start">
+                <button 
+                    onClick={() => { setEditingId(item.id); setEditForm({ content: item.content, time: item.time_slot }); }} 
+                    className="p-2 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                >
+                    <Pencil size={18} />
+                </button>
+                <button 
+                    onClick={() => deleteItem(item.id)} 
+                    className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                >
+                    <Trash2 size={18} />
+                </button>
+            </div>
+        </div>
+    );
+};
 function TaskCard({ task, onDelete, onUpdate, onProjectClick }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState(task);
@@ -1008,36 +1126,72 @@ function TaskCard({ task, onDelete, onUpdate, onProjectClick }) {
   );
 }
 
+// --- FOCUS OVERLAY (Fix: Respects Sorting Logic & Steps) ---
 function FocusOverlay({ isOpen, onClose, tasks, mode, onComplete }) {
   const [activeTask, setActiveTask] = useState(null);
+  
   useEffect(() => { if (isOpen) selectTask(); }, [isOpen]);
+  
   const selectTask = () => {
+    // 1. Start with the tasks passed down (Already filtered by Project if inside one)
     let pool = tasks.filter(t => !t.isCompleted && !t.isSomeday);
+
+    // 2. Filter by Energy Mode
     if(mode === "tired") pool = pool.filter(t => t.energy === "low");
     else pool = pool.filter(t => ["medium", "high"].includes(t.energy));
+
     if(pool.length === 0) { setActiveTask(null); return; }
-    const urgent = pool.filter(t => t.isUrgent);
-    setActiveTask(urgent.length > 0 ? urgent[Math.floor(Math.random() * urgent.length)] : pool[Math.floor(Math.random() * pool.length)]);
+
+    // 3. APPLY SORTING (Crucial Fix: Use Strict Step Logic)
+    pool.sort((a, b) => {
+        // A. Due Dates (Overdue items first)
+        if (a.dueDate && !b.dueDate) return -1; 
+        if (!a.dueDate && b.dueDate) return 1;
+        if (a.dueDate && b.dueDate && a.dueDate !== b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+
+        // B. Urgency
+        if (a.isUrgent && !b.isUrgent) return -1;
+        if (!a.isUrgent && b.isUrgent) return 1;
+
+        // C. Project Grouping (If mixed list)
+        if (a.project && b.project && a.project !== b.project) return a.project.localeCompare(b.project);
+
+        // D. STEPS (Strict Number Sorting: 1 before 2, 2 before 10)
+        return (Number(a.step) || 999) - (Number(b.step) || 999);
+    });
+
+    // 4. Select the FIRST task (The actual "Next Action")
+    setActiveTask(pool[0]);
   };
+
   const handleDone = () => {
     if(!activeTask) return;
     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
     onComplete(activeTask);
     setTimeout(onClose, 1500);
   };
+
   if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 z-50 bg-white/95 backdrop-blur-md flex items-center justify-center p-4">
       <div className="w-full max-w-lg text-center relative">
         <button onClick={onClose} className="absolute -top-12 right-0 p-2 bg-slate-100 rounded-full hover:bg-slate-200"><X /></button>
         {!activeTask ? (
-           <div className="py-10"><div className="text-6xl mb-4">😌</div><h2 className="text-3xl font-black text-slate-800">You're free!</h2><p className="text-slate-500">No tasks match this energy.</p></div>
+           <div className="py-10">
+             <div className="text-6xl mb-4">😌</div>
+             <h2 className="text-3xl font-black text-slate-800">You're free!</h2>
+             <p className="text-slate-500">No tasks match this energy level.</p>
+           </div>
         ) : (
           <motion.div initial={{scale:0.95}} animate={{scale:1}} className="space-y-6">
+            <div className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-2">Next Step</div>
             <h1 className="text-4xl font-black text-slate-900 leading-tight">{activeTask.content}</h1>
+            {activeTask.project && <div className="inline-block bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full text-sm font-bold">{activeTask.project} {activeTask.step ? `(Step ${activeTask.step})` : ""}</div>}
+            
             <div className="pt-8">
-              <button onClick={handleDone} className="w-full py-6 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-2xl font-bold flex items-center justify-center gap-3"><CheckCircle2 size={32} /> Mark Done</button>
-              <button onClick={onClose} className="mt-4 text-slate-400 font-bold">Skip</button>
+              <button onClick={handleDone} className="w-full py-6 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-2xl font-bold flex items-center justify-center gap-3 shadow-xl shadow-emerald-200"><CheckCircle2 size={32} /> Mark Done</button>
+              <button onClick={onClose} className="mt-6 text-slate-400 font-bold hover:text-slate-600">Skip / Do Later</button>
             </div>
           </motion.div>
         )}
